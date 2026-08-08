@@ -31,6 +31,16 @@ réseaux) vient de l'ancien site.
 - `npm run dev` — serveur de dev.
 - `npm run build` — build statique dans `dist/` (déployable sur n'importe quel hébergeur statique).
 
+## Publication
+
+Hébergé sur GitHub Pages. Le workflow `.github/workflows/deploy.yml` reconstruit et
+met en ligne le site à **chaque push sur `main`** — y compris les modifications faites
+directement depuis l'interface web de GitHub (bouton crayon puis « Commit changes »).
+Compter une à deux minutes ; l'avancement est visible dans l'onglet **Actions**.
+
+`base: './'` dans `vite.config.js` : les chemins sont relatifs, le site fonctionne donc
+aussi bien sur l'URL GitHub Pages que sur le domaine de la Guilde, sans réglage.
+
 ## Règles
 
 - Tout le contenu est en français ; pas d'i18n.
