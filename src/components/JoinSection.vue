@@ -1,24 +1,19 @@
 <script setup>
 import IconGlyph from './IconGlyph.vue'
 
-const channels = [
+// Tarifs d'adhésion annuelle de l'association.
+const memberships = [
   {
-    icon: 'discord',
-    name: 'Discord',
-    detail: 'Le cœur de la vie de la Guilde : annonces de parties, discussions, entraide.',
-    href: 'https://discord.gg/F8aghJ2Mpv',
+    icon: 'user',
+    name: 'Mineur·es',
+    price: 'Gratuit',
+    detail: "L'adhésion est offerte aux moins de 18 ans.",
   },
   {
-    icon: 'instagram',
-    name: 'Instagram',
-    detail: 'Les coulisses de nos tables en images.',
-    href: 'https://www.instagram.com/songesjdr/',
-  },
-  {
-    icon: 'facebook',
-    name: 'Facebook',
-    detail: 'Les actualités et événements de l\'association.',
-    href: 'https://www.facebook.com/laguildedessonges',
+    icon: 'coin',
+    name: 'Adultes',
+    price: '10 € par an',
+    detail: 'Accès à tous les événements et aux locaux de la Guilde.',
   },
 ]
 </script>
@@ -29,30 +24,29 @@ const channels = [
       <p class="section__kicker">Nous rejoindre</p>
       <h2 class="section__title">Prêt·e à lancer les dés&nbsp;?</h2>
       <p class="join__lead">
-        Le plus simple&nbsp;: rejoignez notre Discord et présentez-vous, ou passez
-        nous voir lors d'un créneau. Aucune expérience requise — juste l'envie de
-        jouer.
+        Vous pouvez participer gratuitement aux soirées one-shot mensuelles de la Guilde.
+        Pour une meilleure immersion rôlistique, la Guilde vous propose une adhésion
+        annuelle afin de profiter de tous les événements et de l'accès aux locaux. Les
+        inscriptions et adhésions se font sur notre
+        <a href="https://discord.gg/F8aghJ2Mpv" target="_blank" rel="noopener">Discord</a>.
       </p>
       <div class="join__channels">
-        <a
-          v-for="channel in channels"
-          :key="channel.name"
-          class="join__channel"
-          :href="channel.href"
-          target="_blank"
-          rel="noopener"
-        >
-          <span class="join__icon"><IconGlyph :name="channel.icon" /></span>
-          <span class="join__name">{{ channel.name }}</span>
-          <span class="join__detail">{{ channel.detail }}</span>
-        </a>
+        <article v-for="membership in memberships" :key="membership.name" class="join__channel">
+          <span class="join__icon"><IconGlyph :name="membership.icon" /></span>
+          <h3 class="join__name">{{ membership.name }}</h3>
+          <p class="join__price">{{ membership.price }}</p>
+          <p class="join__detail">{{ membership.detail }}</p>
+        </article>
       </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.join {
+/* Dernière section : aération supplémentaire avant le pied de page,
+   équivalente à l'espace entre deux sections (2 × 3rem). */
+.section.join {
+  padding-bottom: 6rem;
   background:
     radial-gradient(ellipse 70% 80% at 50% 110%, var(--accent-soft), transparent 70%),
     transparent;
@@ -61,33 +55,31 @@ const channels = [
 /* Pleine largeur, justifié : pas de coupure précoce des phrases */
 .join__lead {
   color: var(--text-muted);
+  font-size: var(--lead-size);
   margin-bottom: 2rem;
   text-align: justify;
 }
 
+/* Deux formules d'adhésion, côte à côte. `grid-auto-rows: 1fr` égalise aussi
+   leur hauteur quand elles s'empilent en mobile. */
 .join__channels {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  grid-auto-rows: 1fr;
   gap: 1.5rem;
 }
 
 .join__channel {
   display: grid;
+  grid-template-rows: auto auto auto 1fr;
   justify-items: center;
   text-align: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
   background: var(--bg-panel);
   border-radius: var(--radius);
-  padding: 1.75rem 1.5rem;
-  text-decoration: none;
+  padding: 1.4rem 1.25rem;
   color: var(--text);
   box-shadow: var(--shadow-out);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.join__channel:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-out-lg);
 }
 
 .join__icon {
@@ -105,11 +97,24 @@ const channels = [
 .join__name {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: 1.25rem;
+}
+
+/* Tarif mis en avant dans un creux : c'est l'information clé de la vignette. */
+.join__price {
+  margin: 0.35rem 0 0.5rem;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  box-shadow: var(--shadow-in-sm);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.05rem;
+  white-space: nowrap;
 }
 
 .join__detail {
   color: var(--text-muted);
-  font-size: 1.05rem;
+  font-size: var(--card-text-size);
+  line-height: 1.4;
 }
 </style>

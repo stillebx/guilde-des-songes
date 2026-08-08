@@ -26,6 +26,21 @@
 
   --radius: 18px;
   --content-width: 1060px;
+  /* Échelle typographique partagée : mêmes tailles pour le titre du hero, les
+     titres de sections (« Qui sommes-nous »…) et les titres des autres pages,
+     et une taille unique pour toutes les phrases d'accroche. */
+  --title-size: clamp(2.15rem, 4.6vw, 3.1rem);
+  --lead-size: 1.35rem;
+  /* Corps du texte des vignettes (cartes) : agrandi sans grossir les cartes,
+     les paddings ayant été resserrés en conséquence. */
+  --card-text-size: 1.1rem;
+
+  /* Code couleur des parties : quatre teintes de rouge, du plus profond
+     (campagnes au long cours) au plus clair (soirées ouvertes à tous). */
+  --kind-campagne: #7c1226;
+  --kind-one-shot: #b01e33;
+  --kind-solo: #9c3550;
+  --kind-mensuelle: #d4586d;
   /* Hauteur commune des bandes entête et pied de page */
   --band-height: 92px;
   /* Espacement uniforme entre les groupes (logo, menus, pastilles) des deux bandes */
@@ -40,6 +55,35 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Firefox uniquement : curseur de défilement rouge sur piste claire.
+   (Scopé à Firefox car si `scrollbar-color` est défini, Chromium ignore
+   les styles ::-webkit-scrollbar et garde sa barre furtive.) */
+@supports (-moz-appearance: none) {
+  html {
+    scrollbar-color: var(--accent) var(--bg);
+  }
+}
+
+/* Navigateurs WebKit/Chromium : curseur rouge arrondi, piste dans le fond du site */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  border-radius: 999px;
+  border: 3px solid var(--bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -48,6 +92,18 @@ body {
   font-size: 19px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Le pied de page reste collé en bas même sur les pages courtes
+   (partenaires, gazette) : la zone de contenu absorbe l'espace restant. */
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+#app > main {
+  flex: 1;
 }
 
 h1,
@@ -77,12 +133,30 @@ img {
 }
 
 .section {
-  padding: 4rem 0;
+  padding: 3rem 0;
 }
 
-/* Les paragraphes coupent les mots si besoin (utile pour le texte justifié en mobile) */
-p {
-  hyphens: auto;
+/* Ancres : on s'arrête au-dessus du titre, jamais sous l'entête collante
+   (utile aussi quand le navigateur saute directement à l'ancre au chargement). */
+[id] {
+  scroll-margin-top: calc(var(--band-height) + 1rem);
+}
+
+/* Pages secondaires : l'ambiance (halos + brume) se place derrière le contenu. */
+.section--atmospheric {
+  position: relative;
+}
+
+.section--atmospheric > .container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Aucune césure nulle part : jamais de mot coupé par un trait d'union en fin
+   de ligne, y compris dans le texte justifié. */
+body {
+  hyphens: none;
+  -webkit-hyphens: none;
 }
 
 .section__kicker {
@@ -95,8 +169,14 @@ p {
 }
 
 .section__title {
-  font-size: clamp(1.6rem, 3.5vw, 2.3rem);
+  font-size: var(--title-size);
   margin-bottom: 1.25rem;
+}
+
+/* Phrases d'accroche : même corps partout (hero, sections, pages) */
+.section__lead {
+  color: var(--text-muted);
+  font-size: var(--lead-size);
 }
 
 .btn {
@@ -145,6 +225,23 @@ p {
 .btn--ghost:active {
   transform: translateY(0);
   box-shadow: var(--shadow-in-sm);
+}
+
+/* L'impression ne doit emporter que le contenu : ni entête, ni pied de page,
+   ni brume (les fonds sombres gâchent le PDF). */
+@media print {
+  .header,
+  .footer,
+  .atmosphere,
+  .fog-veil,
+  .hero__stars {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
 }
 
 /* Boutons ronds néomorphiques des réseaux (entête, pied de page, menu mobile) */

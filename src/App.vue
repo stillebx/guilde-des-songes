@@ -2,11 +2,6 @@
 import { onMounted, ref } from 'vue'
 import WelcomeFog from './components/WelcomeFog.vue'
 import SiteHeader from './components/SiteHeader.vue'
-import HeroSection from './components/HeroSection.vue'
-import AboutSection from './components/AboutSection.vue'
-import ActivitiesSection from './components/ActivitiesSection.vue'
-import PracticalSection from './components/PracticalSection.vue'
-import JoinSection from './components/JoinSection.vue'
 import SiteFooter from './components/SiteFooter.vue'
 
 // Voile d'arrivée : la brume couvre le site au premier paint puis se dissipe
@@ -30,11 +25,7 @@ onMounted(() => {
 <template>
   <SiteHeader />
   <main>
-    <HeroSection />
-    <AboutSection />
-    <ActivitiesSection />
-    <PracticalSection />
-    <JoinSection />
+    <RouterView />
   </main>
   <SiteFooter />
 

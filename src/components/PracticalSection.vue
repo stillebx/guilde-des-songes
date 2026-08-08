@@ -20,13 +20,15 @@ import IconGlyph from './IconGlyph.vue'
           </p>
         </article>
         <article class="practical__card">
-          <span class="practical__icon"><IconGlyph name="pin" /></span>
+          <span class="practical__icon"><IconGlyph name="house" /></span>
           <h3 class="practical__title">Annexe Maison Phare</h3>
           <p class="practical__address">
             1 allée du Roussillon<br />
             21000 Dijon
           </p>
-          <p class="practical__hint">Notre lieu principal, la plupart des séances s'y déroulent.</p>
+          <p class="practical__hint">
+            Notre lieu principal. La plupart des séances et des événements s'y déroulent.
+          </p>
         </article>
         <article class="practical__card">
           <span class="practical__icon"><IconGlyph name="pin" /></span>
@@ -35,7 +37,9 @@ import IconGlyph from './IconGlyph.vue'
             27 avenue Charles Baudelaire<br />
             21000 Dijon
           </p>
-          <p class="practical__hint">Une fois par mois.</p>
+          <p class="practical__hint">
+            Salles disponibles chaque semaine. Accueille les OS mensuelles.
+          </p>
         </article>
       </div>
     </div>
@@ -53,7 +57,7 @@ import IconGlyph from './IconGlyph.vue'
 .practical__card {
   background: var(--bg-panel);
   border-radius: var(--radius);
-  padding: 1.75rem 1.5rem;
+  padding: 1.4rem 1.25rem;
   text-align: center;
   box-shadow: var(--shadow-out);
 }
@@ -71,7 +75,7 @@ import IconGlyph from './IconGlyph.vue'
 }
 
 .practical__title {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   margin-bottom: 1rem;
 }
 
@@ -90,6 +94,7 @@ import IconGlyph from './IconGlyph.vue'
 
 .practical__hint {
   color: var(--text-muted);
-  font-size: 1.05rem;
+  font-size: var(--card-text-size);
+  line-height: 1.4;
 }
 </style>

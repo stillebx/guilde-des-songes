@@ -8,33 +8,51 @@ import IconGlyph from './IconGlyph.vue'
       <div class="about__text">
         <p class="section__kicker">Qui sommes-nous</p>
         <h2 class="section__title">Une guilde ouverte à toutes les tables</h2>
-        <p class="about__body">
-          La Guilde des Songes est une association dijonnaise dédiée au jeu de
-          rôle. Que vous soyez débutant·e ou expérimenté·e, meneur·se de jeu ou
-          joueur·se, nous vous accueillons avec grand plaisir — pour une partie
-          solo comme pour une campagne.
-        </p>
-        <p class="about__body">
-          Envie d'en savoir plus&nbsp;? Passez nous voir lors d'un de nos
-          créneaux ou écrivez-nous sur Discord&nbsp;: on répondra à toutes vos
-          questions, et on vous trouvera une place autour de la table.
-        </p>
+        <!-- Paragraphes centrés en regard des trois vignettes ; le titre, lui,
+             reste en haut pour rester la cible des liens du menu. -->
+        <div class="about__bodies">
+          <p class="about__body">
+            La Guilde des Songes est une association dijonnaise dédiée au jeu de
+            rôle. Que vous soyez débutant·e ou expérimenté·e, meneur·se de jeu ou
+            joueur·se, c'est avec plaisir que nous vous accueillons autour de nos
+            tables.
+          </p>
+          <p class="about__body">
+            La Guilde s'engage également auprès du jeune public à travers l'organisation
+            d'après-midis de découverte et d'initiation. Des moments de partage entre
+            maîtres du jeu sont également organisés pour favoriser les échanges de
+            conseils. Pour les débutant·es qui souhaitent se lancer dans la maîtrise, des
+            soirées sont pensées avec des joueur·ses et MJ expérimenté·es afin de les
+            encourager et les soutenir dans cette nouvelle étape.
+          </p>
+          <p class="about__body">
+            Envie d'en savoir plus&nbsp;? Nous vous invitons à nous contacter, ou à
+            nous rejoindre durant l'un de nos créneaux. Nous répondrons à vos questions
+            et nous vous accompagnerons dans votre démarche d'inscription.
+          </p>
+        </div>
       </div>
       <ul class="about__values">
         <li class="about__value">
           <span class="about__value-icon"><IconGlyph name="dice" /></span>
           <strong>Tous niveaux</strong>
-          <span>Les débutant·es sont guidé·es pour découvrir le jeu de rôle.</span>
+          <span>
+            Les débutant·es sont guidé·es pour découvrir le jeu de rôle, et les plus
+            expérimenté·es s'y retrouvent.
+          </span>
         </li>
         <li class="about__value">
-          <span class="about__value-icon"><IconGlyph name="candle" /></span>
+          <span class="about__value-icon"><IconGlyph name="handshake" /></span>
           <strong>Ambiance conviviale</strong>
           <span>On joue pour rêver ensemble, jamais pour se prendre au sérieux.</span>
         </li>
         <li class="about__value">
           <span class="about__value-icon"><IconGlyph name="book" /></span>
           <strong>Univers variés</strong>
-          <span>L5R, Warhammer et bien d'autres mondes à explorer.</span>
+          <span>
+            Des classiques du médiéval fantastique à la science-fiction, de l'horreur
+            au comique, jusqu'aux jeux de rôle maison.
+          </span>
         </li>
       </ul>
     </div>
@@ -46,7 +64,33 @@ import IconGlyph from './IconGlyph.vue'
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   gap: 3rem;
-  align-items: start;
+}
+
+/* La colonne de texte occupe la hauteur des vignettes : titre en haut,
+   paragraphes centrés en regard des trois cartes. */
+.about__text {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Centrage borné : les paragraphes descendent en regard des vignettes, mais
+   d'au plus ~24px — au-delà, l'espace libre part sous le texte plutôt que de
+   creuser un trou entre le titre et le premier paragraphe. */
+.about__bodies {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.about__bodies::before {
+  content: '';
+  flex: 1;
+  max-height: 1.3rem;
+}
+
+.about__bodies::after {
+  content: '';
+  flex: 1;
 }
 
 /* Texte au fil : justifié pour occuper toute la largeur de sa colonne */
@@ -56,44 +100,47 @@ import IconGlyph from './IconGlyph.vue'
   text-align: justify;
 }
 
+/* Vignettes compactes : leur colonne reste proche de la hauteur du texte, pour
+   que le centrage des paragraphes ne creuse pas de vide sous le titre. */
 .about__values {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
 .about__value {
   display: grid;
   justify-items: center;
   text-align: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
   background: var(--bg-panel);
   border-radius: var(--radius);
-  padding: 1.25rem;
+  padding: 0.75rem 1rem;
   box-shadow: var(--shadow-out);
 }
 
 .about__value-icon {
   color: var(--accent);
-  font-size: 1.5rem;
-  width: 52px;
-  height: 52px;
+  font-size: 1.25rem;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   box-shadow: var(--shadow-in-sm);
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.2rem;
 }
 
 .about__value strong {
-  font-size: 1.02rem;
+  font-size: 1.12rem;
 }
 
 .about__value span:last-child {
   color: var(--text-muted);
-  font-size: 1.05rem;
+  font-size: var(--card-text-size);
+  line-height: 1.4;
 }
 
 @media (max-width: 820px) {

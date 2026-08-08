@@ -10,7 +10,15 @@ import { socials } from '../socials.js'
         <img class="footer__logo" src="/logo-guilde.png" alt="" />
         La Guilde des Songes
       </p>
-      <p class="footer__meta">Association de jeu de rôle à Dijon</p>
+      <!-- Groupe central : plan du site + mention, pour garder 3 blocs comme l'entête -->
+      <div class="footer__center">
+        <nav class="footer__links" aria-label="Plan du site">
+          <RouterLink :to="{ name: 'agenda' }">Agenda</RouterLink>
+          <RouterLink :to="{ name: 'gazette' }">Gazette</RouterLink>
+          <RouterLink :to="{ name: 'partners' }">Partenaires</RouterLink>
+        </nav>
+        <p class="footer__meta">Association de jeu de rôle à Dijon</p>
+      </div>
       <div class="footer__socials">
         <a
           v-for="social in socials"
@@ -58,10 +66,34 @@ import { socials } from '../socials.js'
   width: auto;
 }
 
+.footer__center {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+}
+
+.footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.25rem;
+}
+
+.footer__links a {
+  color: var(--text-muted);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer__links a:hover {
+  color: var(--accent);
+}
+
 .footer__meta {
   text-align: center;
   color: var(--text-muted);
-  font-size: 1.05rem;
+  font-size: 0.98rem;
 }
 
 .footer__socials {

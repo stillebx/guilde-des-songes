@@ -5,17 +5,17 @@ const activities = [
   {
     icon: 'map',
     title: 'Campagnes',
-    text: 'Des histoires au long cours, séance après séance, où vos personnages grandissent et laissent leur marque sur le monde.',
+    text: 'Des histoires au long cours, séance après séance, où vos personnages évoluent et tracent leurs destins.',
+  },
+  {
+    icon: 'swords',
+    title: 'Soirées one-shot',
+    text: 'Une histoire complète en une soirée. Parfait pour essayer un nouveau jeu, une nouvelle table. Émotions garanties !',
   },
   {
     icon: 'moon',
     title: 'Parties solo',
     text: 'Un·e joueur·se, un·e MJ : une aventure sur mesure, idéale pour découvrir un univers ou vivre un récit intimiste.',
-  },
-  {
-    icon: 'swords',
-    title: 'Soirées one-shot',
-    text: 'Une histoire complète en une soirée. Parfait pour essayer un nouveau jeu, une nouvelle table — ou le jeu de rôle tout court.',
   },
 ]
 </script>
@@ -33,10 +33,11 @@ const activities = [
         </article>
       </div>
       <p class="activities__note">
-        Les prochaines parties sont annoncées sur notre
-        <a href="https://discord.gg/F8aghJ2Mpv" target="_blank" rel="noopener">Discord</a> —
-        et nos meneur·ses publient des résumés de leurs campagnes (L5R, Warhammer…)
-        pour vous donner un avant-goût.
+        Les prochaines parties sont dans notre
+        <RouterLink :to="{ name: 'agenda' }">agenda</RouterLink>, annoncées aussi sur le
+        <a href="https://discord.gg/F8aghJ2Mpv" target="_blank" rel="noopener">Discord</a>.
+        Nos meneur·ses racontent leurs campagnes dans la
+        <RouterLink :to="{ name: 'gazette' }">gazette</RouterLink>.
       </p>
     </div>
   </section>
@@ -57,7 +58,7 @@ const activities = [
 .activity {
   background: var(--bg-panel);
   border-radius: var(--radius);
-  padding: 1.75rem 1.5rem;
+  padding: 1.4rem 1.25rem;
   text-align: center;
   box-shadow: var(--shadow-out);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -81,13 +82,14 @@ const activities = [
 }
 
 .activity__title {
-  font-size: 1.2rem;
+  font-size: 1.28rem;
   margin-bottom: 0.6rem;
 }
 
 .activity__text {
   color: var(--text-muted);
-  font-size: 1.05rem;
+  font-size: var(--card-text-size);
+  line-height: 1.4;
 }
 
 .activities__note {

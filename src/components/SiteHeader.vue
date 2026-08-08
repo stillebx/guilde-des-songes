@@ -1,36 +1,95 @@
 <script setup>
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import IconGlyph from './IconGlyph.vue'
 import { socials } from '../socials.js'
 
-const links = [
-  { href: '#qui-sommes-nous', label: 'Qui sommes-nous' },
-  { href: '#activites', label: 'Nos parties' },
-  { href: '#infos-pratiques', label: 'Infos pratiques' },
-  { href: '#rejoindre', label: 'Nous rejoindre' },
+// Les sections de l'accueil sont regroupées dans le déroulant « Accueil »
+// pour garder une barre courte ; les autres pages restent au premier niveau.
+const homeSections = [
+  { label: 'Qui sommes-nous', to: { name: 'home', hash: '#qui-sommes-nous' } },
+  { label: 'Nos parties', to: { name: 'home', hash: '#activites' } },
+  { label: 'Infos pratiques', to: { name: 'home', hash: '#infos-pratiques' } },
+  { label: 'Nous rejoindre', to: { name: 'home', hash: '#rejoindre' } },
+]
+
+const pages = [
+  { label: 'Agenda', to: { name: 'agenda' } },
+  { label: 'Gazette', to: { name: 'gazette' } },
+  { label: 'Partenaires', to: { name: 'partners' } },
 ]
 
 const menuOpen = ref(false)
+const homeOpen = ref(false)
+
+function closeAll() {
+  menuOpen.value = false
+  homeOpen.value = false
+}
+
+// Le déroulant ouvert au clic (tactile, clavier) doit se refermer sur un clic
+// ailleurs et à chaque changement de page — le mouseleave ne suffit pas.
+const headerEl = ref(null)
+
+function onDocumentClick(event) {
+  if (headerEl.value && !headerEl.value.contains(event.target)) closeAll()
+}
+
+onMounted(() => document.addEventListener('click', onDocumentClick))
+onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
+
+const route = useRoute()
+watch(() => [route.path, route.hash], closeAll)
 </script>
 
 <template>
-  <header class="header">
+  <header ref="headerEl" class="header">
     <div class="container header__inner">
-      <a href="#" class="header__brand">
+      <RouterLink to="/" class="header__brand">
         <img class="header__logo" src="/logo-guilde.png" alt="" />
         La Guilde des Songes
-      </a>
+      </RouterLink>
 
       <nav class="header__nav" :class="{ 'header__nav--open': menuOpen }" aria-label="Navigation principale">
-        <a
-          v-for="link in links"
-          :key="link.href"
-          :href="link.href"
-          class="header__link"
-          @click="menuOpen = false"
+        <!-- « Accueil » : lien vers la page + déroulant de ses sections -->
+        <div
+          class="header__group"
+          @mouseenter="homeOpen = true"
+          @mouseleave="homeOpen = false"
         >
-          {{ link.label }}
-        </a>
+          <RouterLink to="/" class="header__link" @click="closeAll">Accueil</RouterLink>
+          <button
+            class="header__caret"
+            :aria-expanded="homeOpen"
+            aria-label="Afficher les sections de l'accueil"
+            @click="homeOpen = !homeOpen"
+          >
+            ▾
+          </button>
+
+          <div class="header__dropdown" :class="{ 'header__dropdown--open': homeOpen }">
+            <RouterLink
+              v-for="section in homeSections"
+              :key="section.label"
+              :to="section.to"
+              class="header__dropdown-link"
+              @click="closeAll"
+            >
+              {{ section.label }}
+            </RouterLink>
+          </div>
+        </div>
+
+        <RouterLink
+          v-for="page in pages"
+          :key="page.label"
+          :to="page.to"
+          class="header__link"
+          @click="closeAll"
+        >
+          {{ page.label }}
+        </RouterLink>
+
         <div class="header__nav-socials">
           <a
             v-for="social in socials"
@@ -41,7 +100,7 @@ const menuOpen = ref(false)
             :title="social.label"
             :target="social.href.startsWith('http') ? '_blank' : undefined"
             :rel="social.href.startsWith('http') ? 'noopener' : undefined"
-            @click="menuOpen = false"
+            @click="closeAll"
           >
             <IconGlyph :name="social.icon" />
           </a>
@@ -127,8 +186,69 @@ const menuOpen = ref(false)
   transition: color 0.2s ease;
 }
 
-.header__link:hover {
+.header__link:hover,
+.header__link.router-link-active {
   color: var(--accent);
+}
+
+/* Groupe « Accueil » : le déroulant se positionne sous lui */
+.header__group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.header__caret {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.header__group:hover .header__caret {
+  color: var(--accent);
+}
+
+.header__dropdown {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  display: grid;
+  gap: 0.2rem;
+  min-width: 210px;
+  padding: 0.6rem;
+  border-radius: var(--radius);
+  background: var(--bg);
+  box-shadow: var(--shadow-out);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+}
+
+.header__dropdown--open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.header__dropdown-link {
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.header__dropdown-link:hover {
+  color: var(--accent);
+  box-shadow: var(--shadow-in-sm);
 }
 
 .header__nav-socials {
@@ -163,7 +283,7 @@ const menuOpen = ref(false)
   box-shadow: var(--shadow-in-sm);
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1040px) {
   .header__inner {
     justify-content: space-between;
   }
@@ -188,6 +308,37 @@ const menuOpen = ref(false)
 
   .header__link {
     padding: 0.7rem 0;
+  }
+
+  /* En mobile, les sections de l'accueil sont déjà dépliées : pas de survol possible */
+  .header__group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .header__caret {
+    display: none;
+  }
+
+  .header__dropdown {
+    position: static;
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    min-width: 0;
+    padding: 0 0 0.5rem 0.9rem;
+    background: none;
+    box-shadow: none;
+  }
+
+  .header__dropdown-link {
+    padding: 0.5rem 0;
+    font-weight: 400;
+  }
+
+  .header__dropdown-link:hover {
+    box-shadow: none;
   }
 
   /* En mobile, les réseaux vivent dans le menu déroulant */
