@@ -1,13 +1,12 @@
 <script setup>
 import IconGlyph from '../components/IconGlyph.vue'
+import ContactLink from '../components/ContactLink.vue'
 import PageHeading from '../components/PageHeading.vue'
-import PageAtmosphere from '../components/PageAtmosphere.vue'
 import { partners } from '../data/partners.js'
 </script>
 
 <template>
-  <section class="section section--atmospheric">
-    <PageAtmosphere />
+  <section class="section">
     <div class="container">
       <PageHeading
         kicker="Nos partenaires"
@@ -46,7 +45,7 @@ import { partners } from '../data/partners.js'
       <p class="partners__note">
         Vous tenez un lieu, une boutique ou un festival et souhaitez collaborer avec la
         Guilde&nbsp;? Écrivez-nous à
-        <a href="mailto:laguildedessonges@gmail.com">laguildedessonges@gmail.com</a>.
+        <ContactLink subject="Partenariat avec la Guilde des Songes" />.
       </p>
     </div>
   </section>
@@ -71,12 +70,11 @@ import { partners } from '../data/partners.js'
   text-decoration: none;
   color: var(--text);
   box-shadow: var(--shadow-out);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: box-shadow 0.3s ease;
 }
 
-a.partner:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-out-lg);
+.partner:hover {
+  box-shadow: var(--shadow-out), var(--glow);
 }
 
 .partner__icon {

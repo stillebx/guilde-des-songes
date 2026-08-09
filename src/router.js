@@ -1,14 +1,15 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from './pages/HomePage.vue'
 import PartnersPage from './pages/PartnersPage.vue'
 import AgendaPage from './pages/AgendaPage.vue'
 import GazettePage from './pages/GazettePage.vue'
 import GazetteIssuePage from './pages/GazetteIssuePage.vue'
 
-// Historique en hash (#/agenda) : le site reste un pur statique déployable sur
-// n'importe quel hébergeur, sans règle de réécriture serveur à configurer.
+// URL propres (/agenda) plutôt que /#/agenda. Le serveur doit renvoyer
+// index.html pour toute route inconnue : c'est le rôle de `public/.htaccess`
+// (Apache, OVH) et de `public/404.html` (GitHub Pages). En dev, Vite le fait.
 export const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'home', component: HomePage },
     { path: '/partenaires', name: 'partners', component: PartnersPage },

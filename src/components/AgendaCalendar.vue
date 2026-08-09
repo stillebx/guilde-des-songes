@@ -175,7 +175,7 @@ function onDayClick(cell) {
 }
 
 .calendar__nav:hover {
-  box-shadow: var(--shadow-out);
+  box-shadow: var(--shadow-out-sm), var(--glow);
 }
 
 .calendar__nav:active {
@@ -232,7 +232,7 @@ function onDayClick(cell) {
 }
 
 .calendar__day--marked:hover {
-  box-shadow: var(--shadow-out);
+  box-shadow: var(--shadow-out-sm), var(--glow);
 }
 
 /* Partie passée : toujours consultable, mais en retrait. */

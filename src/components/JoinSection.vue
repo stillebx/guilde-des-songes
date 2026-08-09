@@ -47,9 +47,14 @@ const memberships = [
    équivalente à l'espace entre deux sections (2 × 3rem). */
 .section.join {
   padding-bottom: 6rem;
-  background:
-    radial-gradient(ellipse 70% 80% at 50% 110%, var(--accent-soft), transparent 70%),
-    transparent;
+  /* Même voile de séparation que « Nos parties » : la brume s'y dissipe. */
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--bg) 78%, transparent) 18%,
+    color-mix(in srgb, var(--bg) 78%, transparent) 88%,
+    transparent
+  );
 }
 
 /* Pleine largeur, justifié : pas de coupure précoce des phrases */
@@ -80,6 +85,11 @@ const memberships = [
   padding: 1.4rem 1.25rem;
   color: var(--text);
   box-shadow: var(--shadow-out);
+  transition: box-shadow 0.3s ease;
+}
+
+.join__channel:hover {
+  box-shadow: var(--shadow-out), var(--glow);
 }
 
 .join__icon {

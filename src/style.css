@@ -20,6 +20,10 @@
   --shadow-in-sm: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light);
   --shadow-accent: 6px 6px 16px rgba(176, 30, 51, 0.35), -5px -5px 12px rgba(255, 255, 255, 0.8);
 
+  /* Survol : un seul et même halo lumineux rouge pour toute l'interface
+     (boutons, pastilles, vignettes, jours du calendrier), sans déplacement. */
+  --glow: 0 0 0 1px rgba(176, 30, 51, 0.22), 0 0 20px 3px rgba(176, 30, 51, 0.32);
+
   /* Garamond partout (EB Garamond en version web) */
   --font-display: 'EB Garamond', 'Garamond', serif;
   --font-body: 'EB Garamond', 'Garamond', serif;
@@ -41,18 +45,76 @@
   --kind-one-shot: #b01e33;
   --kind-solo: #9c3550;
   --kind-mensuelle: #d4586d;
+  /* Hors partie (assemblée, atelier, festival…) : prune sourd, dans la même
+     famille chromatique sans se confondre avec une partie. */
+  --kind-evenement: #6f5566;
   /* Hauteur commune des bandes entête et pied de page */
   --band-height: 92px;
   /* Espacement uniforme entre les groupes (logo, menus, pastilles) des deux bandes */
   --band-gap: clamp(1.5rem, 4vw, 3.25rem);
 }
 
+/* Mode sombre : mêmes tokens, teintes inversées. Le relief néomorphique tient
+   sur un fond prune sombre, avec une lumière plus discrète et des rouges
+   éclaircis pour rester lisibles. Appliqué via data-theme sur <html> (posé
+   avant le premier rendu par le script d'index.html). */
+:root[data-theme='dark'] {
+  --bg: #241a1c;
+  --bg-panel: #241a1c;
+  --bg-panel-soft: #2c2023;
+  --text: #f2e6e7;
+  --text-muted: #c0a4a9;
+  --accent: #e2647a;
+  --accent-strong: #c04358;
+  --accent-soft: rgba(226, 100, 122, 0.12);
+  --border: rgba(242, 230, 231, 0.08);
+
+  --shadow-dark: rgba(0, 0, 0, 0.55);
+  --shadow-light: rgba(255, 255, 255, 0.05);
+  --shadow-accent: 6px 6px 16px rgba(0, 0, 0, 0.5), -5px -5px 12px rgba(255, 255, 255, 0.06);
+
+  --glow: 0 0 0 1px rgba(226, 100, 122, 0.32), 0 0 20px 3px rgba(226, 100, 122, 0.36);
+
+  --kind-campagne: #b8465c;
+  --kind-one-shot: #e2647a;
+  --kind-solo: #cf6a86;
+  --kind-mensuelle: #f090a2;
+  --kind-evenement: #c9a8bd;
+}
+
 * {
   box-sizing: border-box;
 }
 
+/* Le texte ne se sélectionne pas par défaut (clics et glissés sur l'interface).
+   Les zones de lecture et de saisie rétablissent la sélection plus bas. */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Contenu qu'on peut vouloir copier : articles de la gazette, adresses,
+   horaires, coordonnées, et bien sûr les champs de saisie. */
+.selectable,
+.selectable *,
+input,
+textarea,
+.prose,
+.prose *,
+.practical__address,
+.practical__list,
+.partner__address,
+.detail__when,
+.detail__meta,
+.detail__text {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 html {
   scroll-behavior: smooth;
+  /* Fond porté par <html> : la couche de brume (z-index -1) reste visible. */
+  background: var(--bg);
 }
 
 /* Firefox uniquement : curseur de défilement rouge sur piste claire.
@@ -86,7 +148,7 @@ html {
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 19px;
@@ -142,16 +204,6 @@ img {
   scroll-margin-top: calc(var(--band-height) + 1rem);
 }
 
-/* Pages secondaires : l'ambiance (halos + brume) se place derrière le contenu. */
-.section--atmospheric {
-  position: relative;
-}
-
-.section--atmospheric > .container {
-  position: relative;
-  z-index: 1;
-}
-
 /* Aucune césure nulle part : jamais de mot coupé par un trait d'union en fin
    de ligne, y compris dans le texte justifié. */
 body {
@@ -191,7 +243,7 @@ body {
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  transition: box-shadow 0.25s ease, background 0.25s ease;
   white-space: nowrap;
 }
 
@@ -202,12 +254,10 @@ body {
 }
 
 .btn--primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 8px 8px 22px rgba(176, 30, 51, 0.45), -6px -6px 14px rgba(255, 255, 255, 0.85);
+  box-shadow: var(--shadow-accent), var(--glow);
 }
 
 .btn--primary:active {
-  transform: translateY(0);
   box-shadow: var(--shadow-in-sm);
 }
 
@@ -218,12 +268,10 @@ body {
 }
 
 .btn--ghost:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-out);
+  box-shadow: var(--shadow-out-sm), var(--glow);
 }
 
 .btn--ghost:active {
-  transform: translateY(0);
   box-shadow: var(--shadow-in-sm);
 }
 
@@ -250,19 +298,24 @@ body {
   height: 38px;
   display: grid;
   place-items: center;
+  /* `border`/`background` neutralisés : certaines pastilles sont des <button>
+     (contact, thème) et hériteraient sinon du style natif du navigateur. */
+  border: none;
+  background: transparent;
+  padding: 0;
   border-radius: 50%;
   color: var(--accent);
+  font-family: inherit;
   font-size: 1.15rem;
+  cursor: pointer;
   box-shadow: var(--shadow-out-sm);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: box-shadow 0.25s ease;
 }
 
 .social-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-out);
+  box-shadow: var(--shadow-out-sm), var(--glow);
 }
 
 .social-btn:active {
-  transform: translateY(0);
   box-shadow: var(--shadow-in-sm);
 }

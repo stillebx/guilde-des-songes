@@ -3,7 +3,6 @@ import { nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import IconGlyph from '../components/IconGlyph.vue'
 import PageHeading from '../components/PageHeading.vue'
-import PageAtmosphere from '../components/PageAtmosphere.vue'
 import { issues } from '../data/gazette.js'
 
 const router = useRouter()
@@ -26,8 +25,7 @@ async function downloadIssue(issue) {
 </script>
 
 <template>
-  <section class="section section--atmospheric">
-    <PageAtmosphere />
+  <section class="section">
     <div class="container">
       <PageHeading
         kicker="La gazette"
@@ -88,12 +86,11 @@ async function downloadIssue(issue) {
   padding: 1.75rem;
   color: var(--text);
   box-shadow: var(--shadow-out);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: box-shadow 0.3s ease;
 }
 
 .issue:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-out-lg);
+  box-shadow: var(--shadow-out), var(--glow);
 }
 
 .issue__actions {

@@ -2,7 +2,8 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import IconGlyph from './IconGlyph.vue'
-import { socials } from '../socials.js'
+import ThemeToggle from './ThemeToggle.vue'
+import { socials, openContact } from '../socials.js'
 
 // Les sections de l'accueil sont regroupées dans le déroulant « Accueil »
 // pour garder une barre courte ; les autres pages restent au premier niveau.
@@ -91,36 +92,41 @@ watch(() => [route.path, route.hash], closeAll)
         </RouterLink>
 
         <div class="header__nav-socials">
-          <a
+          <component
+            :is="social.mail ? 'button' : 'a'"
             v-for="social in socials"
             :key="social.icon"
             class="social-btn"
-            :href="social.href"
+            :href="social.mail ? undefined : social.href"
             :aria-label="social.label"
             :title="social.label"
-            :target="social.href.startsWith('http') ? '_blank' : undefined"
-            :rel="social.href.startsWith('http') ? 'noopener' : undefined"
-            @click="closeAll"
+            :target="social.href?.startsWith('http') ? '_blank' : undefined"
+            :rel="social.href?.startsWith('http') ? 'noopener' : undefined"
+            @click="social.mail ? openContact() : null; closeAll()"
           >
             <IconGlyph :name="social.icon" />
-          </a>
+          </component>
+          <ThemeToggle />
         </div>
       </nav>
 
       <div class="header__actions">
         <div class="header__socials">
-          <a
+          <component
+            :is="social.mail ? 'button' : 'a'"
             v-for="social in socials"
             :key="social.icon"
             class="social-btn"
-            :href="social.href"
+            :href="social.mail ? undefined : social.href"
             :aria-label="social.label"
             :title="social.label"
-            :target="social.href.startsWith('http') ? '_blank' : undefined"
-            :rel="social.href.startsWith('http') ? 'noopener' : undefined"
+            :target="social.href?.startsWith('http') ? '_blank' : undefined"
+            :rel="social.href?.startsWith('http') ? 'noopener' : undefined"
+            @click="social.mail ? openContact() : null"
           >
             <IconGlyph :name="social.icon" />
-          </a>
+          </component>
+          <ThemeToggle />
         </div>
 
         <button
@@ -169,6 +175,11 @@ watch(() => [route.path, route.hash], closeAll)
 .header__logo {
   height: 60px;
   width: auto;
+}
+
+/* Le tracé du logo est rouge sombre : on l'éclaircit sur fond sombre. */
+:root[data-theme='dark'] .header__logo {
+  filter: brightness(1.75) saturate(1.1);
 }
 
 .header__nav {

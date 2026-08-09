@@ -1,0 +1,14 @@
+# Hébergement Apache (OVH mutualisé) : les URL du site sont propres (/agenda,
+# /gazette/…). Ces adresses ne correspondent à aucun fichier : on renvoie
+# index.html, et c'est le routeur du site qui affiche la bonne page.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Fichiers et dossiers réels (images, CSS, JS…) : servis tels quels.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  RewriteRule . /index.html [L]
+</IfModule>

@@ -1,37 +1,33 @@
 <script setup>
-// Ambiance des pages secondaires : mêmes halos rouges + brume que le hero de
-// l'accueil, en fondu vers le bas pour ne jamais couper net le contenu.
-// À placer en premier enfant d'un conteneur `position: relative`.
+// Ambiance du site : brume, en couche fixe derrière tout le contenu. Posée une
+// seule fois dans App.vue, elle accompagne donc toutes les pages sur toute leur
+// hauteur, sans être étirée au défilement.
+//
+// Pas de halos en dégradé radial ici : sur des teintes aussi peu contrastées,
+// ils produisaient des anneaux de bande bien visibles. La brume du shader,
+// bruitée par nature, donne la même profondeur sans cet artefact.
 import WelcomeFog from './WelcomeFog.vue'
 </script>
 
 <template>
   <div class="atmosphere" aria-hidden="true">
-    <div class="atmosphere__halos" />
     <WelcomeFog subtle />
   </div>
 </template>
 
 <style scoped>
 .atmosphere {
-  position: absolute;
-  inset: 0 0 auto;
-  /* Couvre le haut de la page puis se dissout : le contenu reste lisible. */
-  height: min(760px, 100%);
+  position: fixed;
+  inset: 0;
   overflow: hidden;
   pointer-events: none;
-  z-index: 0;
-  -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 45%, transparent 100%);
+  /* Derrière le contenu, mais au-dessus du fond de page (posé sur <html>). */
+  z-index: -1;
 }
 
-.atmosphere__halos {
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(ellipse 45% 40% at 10% 8%, var(--accent-soft), transparent 70%),
-    radial-gradient(ellipse 40% 35% at 90% 22%, var(--accent-soft), transparent 70%),
-    radial-gradient(ellipse 50% 40% at 45% 75%, var(--accent-soft), transparent 70%);
-  opacity: 0.85;
+/* Brume d'ambiance permanente : plus discrète que le voile d'arrivée, mais
+   franchement perceptible — à 0.12 elle passait inaperçue. */
+.atmosphere :deep(.welcome-fog) {
+  opacity: 0.26;
 }
 </style>

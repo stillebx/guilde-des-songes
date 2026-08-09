@@ -8,12 +8,31 @@
       name="description"
       content="La Guilde des Songes, association de jeu de rôle à Dijon. Campagnes, parties solo et soirées one-shot, pour débutant·es comme confirmé·es. Ta partie commence ici !"
     />
+
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="512x512" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#f4eeee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#241a1c" media="(prefers-color-scheme: dark)" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&display=swap"
       rel="stylesheet"
     />
+
+    <script>
+      // Thème appliqué avant le premier rendu : évite le flash clair au
+      // chargement quand le mode sombre est actif.
+      ;(() => {
+        const choix = localStorage.getItem('theme') || 'system'
+        const sombre =
+          choix === 'dark' ||
+          (choix === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.dataset.theme = sombre ? 'dark' : 'light'
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

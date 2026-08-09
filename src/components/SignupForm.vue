@@ -2,30 +2,25 @@
 // Inscription aux soirées one-shot mensuelles : ouvertes à tout le monde, donc
 // pas de validation par un MJ — le pseudo Discord suffit.
 //
-// Le site est statique : c'est un service externe qui reçoit l'inscription.
-// Deux modes, dans cet ordre :
+// L'inscription part dans la feuille Google qui pilote l'agenda : elle y est
+// horodatée, numérotée, et le nombre de places restantes s'en déduit
+// (voir docs/agenda-google-sheet.gs et src/data/sheet.js).
 //
-// 1. DISCORD_WEBHOOK — recommandé. Créer un webhook dans le salon des soirées
-//    mensuelles (Paramètres du salon › Intégrations › Créer un webhook) et
-//    coller son URL ci-dessous : chaque inscription y tombe automatiquement.
-//    À savoir : l'URL est visible dans le code du site publié ; en cas de spam,
-//    il suffit de supprimer le webhook et d'en créer un autre.
-// 2. SIGNUP_ENDPOINT — un service de formulaire (Formspree, Netlify Forms…)
-//    si vous préférez une liste hors Discord.
-//
-// Sans configuration, le formulaire prépare un message pré-rempli vers la boîte
-// mail de la Guilde : l'inscription fonctionne, mais l'envoi reste manuel.
+// Tant que la feuille n'est pas configurée, le formulaire prépare un message
+// pré-rempli vers la boîte mail de la Guilde : l'inscription fonctionne, mais
+// l'envoi reste manuel.
 import { computed, ref } from 'vue'
-
-const DISCORD_WEBHOOK = ''
-const SIGNUP_ENDPOINT = ''
-const CONTACT_EMAIL = 'laguildedessonges@gmail.com'
+import { contactHref } from '../socials.js'
+import { SHEET_ENDPOINT, postInscription } from '../data/sheet.js'
 
 const props = defineProps({
   title: { type: String, required: true },
   date: { type: String, required: true },
   time: { type: String, default: '' },
 })
+
+// Prévient la page pour qu'elle relise les places restantes.
+const emit = defineEmits(['inscrit'])
 
 const pseudo = ref('')
 const sent = ref(false)
@@ -34,12 +29,19 @@ const error = ref('')
 // `true` quand l'inscription est partie toute seule ; `false` en repli mail,
 // où il reste à l'utilisateur à envoyer le message.
 const registered = ref(false)
+// Rang d'arrivée et places restantes renvoyés par la feuille, quand ils sont lisibles.
+const rang = ref(0)
+const restantes = ref(null)
 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
 })
+
+// « 1re position », « 2e position »… — l'abréviation de « premier » est
+// irrégulière en français.
+const positionLabel = computed(() => (rang.value === 1 ? '1re' : `${rang.value}e`))
 
 const readableDate = computed(() => {
   const [y, m, d] = props.date.split('-').map(Number)
@@ -52,12 +54,13 @@ async function submit() {
 
   const when = `${readableDate.value}${props.time ? ` à ${props.time}` : ''}`
 
-  if (!DISCORD_WEBHOOK && !SIGNUP_ENDPOINT) {
+  // Sans feuille configurée : message pré-rempli vers la Guilde.
+  if (!SHEET_ENDPOINT) {
     const subject = `Inscription — ${props.title} (${readableDate.value})`
     const body =
       `Bonjour,\n\nJe m'inscris à la soirée « ${props.title} » du ${when}.\n\n` +
       `Pseudo Discord : ${name}\n\nMerci !`
-    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    window.location.href = `${contactHref(subject)}&body=${encodeURIComponent(body)}`
     registered.value = false
     sent.value = true
     return
@@ -65,31 +68,32 @@ async function submit() {
 
   sending.value = true
   error.value = ''
-  try {
-    const [url, payload] = DISCORD_WEBHOOK
-      ? [
-          DISCORD_WEBHOOK,
-          {
-            content:
-              `**Nouvelle inscription**\nSoirée : ${props.title}\n` +
-              `Date : ${when}\nPseudo Discord : ${name}`,
-          },
-        ]
-      : [SIGNUP_ENDPOINT, { soiree: props.title, date: props.date, pseudo: name }]
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    if (!response.ok) throw new Error('envoi impossible')
-    registered.value = true
-    sent.value = true
-  } catch {
-    error.value = "L'inscription n'a pas pu être envoyée. Réessayez ou passez par le Discord."
-  } finally {
-    sending.value = false
+  const resultat = await postInscription({
+    soiree: props.title,
+    dateSoiree: props.date,
+    horaire: props.time,
+    pseudo: name,
+  })
+
+  sending.value = false
+
+  if (resultat.complet) {
+    error.value = "Cette soirée vient d'afficher complet. Écrivez-nous sur le Discord."
+    emit('inscrit')
+    return
   }
+
+  if (!resultat.ok) {
+    error.value = "L'inscription n'a pas pu être envoyée. Réessayez ou passez par le Discord."
+    return
+  }
+
+  rang.value = resultat.rang || 0
+  restantes.value = typeof resultat.restantes === 'number' ? resultat.restantes : null
+  registered.value = true
+  sent.value = true
+  emit('inscrit')
 }
 </script>
 
@@ -115,8 +119,15 @@ async function submit() {
   <p v-else class="signup__done">
     <template v-if="registered">
       <span class="signup__badge">Inscription enregistrée</span>
-      À bientôt pour <strong>{{ title }}</strong>&nbsp;! Retrouvez les détails sur le
-      Discord de la Guilde.
+      <template v-if="rang">
+        Vous êtes inscrit·e en <strong>{{ positionLabel }} position</strong> pour
+        <strong>{{ title }}</strong><template v-if="restantes !== null">, il reste
+        {{ restantes }} place{{ restantes > 1 ? 's' : '' }}</template>. À bientôt&nbsp;!
+      </template>
+      <template v-else>
+        À bientôt pour <strong>{{ title }}</strong>&nbsp;! Retrouvez les détails sur le
+        Discord de la Guilde.
+      </template>
     </template>
     <template v-else>
       <span class="signup__badge">Message prêt</span>

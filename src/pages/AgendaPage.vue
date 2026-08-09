@@ -1,10 +1,10 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import PageHeading from '../components/PageHeading.vue'
-import PageAtmosphere from '../components/PageAtmosphere.vue'
 import AgendaCalendar from '../components/AgendaCalendar.vue'
 import SignupForm from '../components/SignupForm.vue'
-import { events, KIND_LABELS } from '../data/events.js'
+import { events as localEvents, KIND_LABELS } from '../data/events.js'
+import { fetchAgenda, placesRestantes } from '../data/sheet.js'
 
 // Six vignettes par page (3 colonnes × 2 lignes) : la page reste courte quel
 // que soit le nombre de parties annoncées.
@@ -12,7 +12,18 @@ const PAGE_SIZE = 6
 
 const today = new Date().toISOString().slice(0, 10)
 
-const sorted = computed(() => [...events].sort((a, b) => a.date.localeCompare(b.date)))
+// L'agenda vient de la feuille Google quand elle est configurée et joignable ;
+// sinon on garde les parties écrites dans events.js — jamais de page vide.
+const events = ref(localEvents)
+
+async function chargerAgenda() {
+  const depuisFeuille = await fetchAgenda()
+  if (depuisFeuille) events.value = depuisFeuille
+}
+
+onMounted(chargerAgenda)
+
+const sorted = computed(() => [...events.value].sort((a, b) => a.date.localeCompare(b.date)))
 
 // Les parties passées quittent la liste mais restent consultables dans le
 // calendrier : leur pastille y demeure, en retrait.
@@ -22,13 +33,32 @@ function eventKey(event) {
   return event.date + event.title
 }
 
-// Les soirées mensuelles (ouvertes à tous) ont leur propre teinte.
+// Le type vient de la feuille et pilote couleur et libellé ; la présence d'un
+// formulaire d'inscription, elle, ne dépend que du nombre de places.
 function kindOf(event) {
-  return event.form ? 'mensuelle' : event.kind
+  return event.kind || 'one-shot'
 }
 
 function kindLabel(event) {
-  return event.form ? 'Soirée mensuelle' : KIND_LABELS[event.kind] || event.kind
+  return KIND_LABELS[kindOf(event)] || kindOf(event)
+}
+
+// Places affichées : décompte réel venu de la feuille, sinon le texte de events.js.
+function placesLabel(event) {
+  const restantes = placesRestantes(event)
+  if (restantes === null) return event.seats || ''
+  if (restantes === 0) return 'Complet'
+  return `${restantes} place${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}`
+}
+
+function estComplet(event) {
+  return placesRestantes(event) === 0
+}
+
+// Les cellules laissées vides dans la feuille ne doivent laisser aucune trace :
+// on assemble les lignes d'information à partir des seuls champs remplis.
+function joindre(...parties) {
+  return parties.filter((p) => p && String(p).trim()).join(' · ')
 }
 
 function kindColor(event) {
@@ -114,12 +144,11 @@ function formatShortDate(iso) {
 </script>
 
 <template>
-  <section class="section section--atmospheric">
-    <PageAtmosphere />
+  <section class="section">
     <div class="container">
       <PageHeading
         kicker="Agenda"
-        title="L'agenda des campagnes et des One Shot"
+        title="L'agenda des parties et des événements"
         lead="Les salons Discord permettent aux maîtres du jeu d'annoncer leurs parties. Les joueuses et joueurs peuvent s'y inscrire."
       />
 
@@ -143,26 +172,33 @@ function formatShortDate(iso) {
           <p class="detail__kind">{{ kindLabel(openEvent) }}</p>
           <h2 class="detail__title">{{ openEvent.title }}</h2>
           <p class="detail__when">
-            {{ formatDate(openEvent.date) }} · {{ openEvent.time }} · {{ openEvent.place }}
+            {{ joindre(formatDate(openEvent.date), openEvent.time, openEvent.place) }}
           </p>
-          <p v-if="openEvent.gm || openEvent.game" class="detail__meta">
-            {{ openEvent.game }}<template v-if="openEvent.gm"> · {{ openEvent.gm }}</template>
+          <p v-if="joindre(openEvent.game, openEvent.gm)" class="detail__meta">
+            {{ joindre(openEvent.game, openEvent.gm) }}
           </p>
         </div>
 
-        <p class="detail__text">{{ openEvent.text }}</p>
+        <p v-if="openEvent.text" class="detail__text">{{ openEvent.text }}</p>
 
         <p v-if="openEvent.date < today" class="detail__past">Cette partie a déjà eu lieu.</p>
 
         <template v-else>
-          <p v-if="openEvent.seats" class="detail__seats">{{ openEvent.seats }}</p>
+          <p v-if="placesLabel(openEvent)" class="detail__seats" :class="{ 'detail__seats--complet': estComplet(openEvent) }">
+            {{ placesLabel(openEvent) }}
+          </p>
+
+          <p v-if="estComplet(openEvent)" class="detail__closed">
+            Cette soirée affiche complet. Écrivez-nous sur le Discord pour la liste d'attente.
+          </p>
 
           <!-- Soirée mensuelle ouverte à tous : inscription directe par formulaire. -->
           <SignupForm
-            v-if="openEvent.form"
+            v-else-if="openEvent.form"
             :title="openEvent.title"
             :date="openEvent.date"
             :time="openEvent.time"
+            @inscrit="chargerAgenda"
           />
           <!-- Partie classique : le MJ gère les inscriptions dans son salon. -->
           <a
@@ -174,7 +210,11 @@ function formatShortDate(iso) {
           >
             S'inscrire sur le Discord
           </a>
-          <p v-else class="detail__closed">Table fermée : la campagne suit son cours.</p>
+          <!-- Sans lien d'inscription : on ne le dit que si la mention a du sens.
+               Un événement hors partie n'a pas de « table » à fermer. -->
+          <p v-else-if="openEvent.kind === 'campagne'" class="detail__closed">
+            Table fermée&nbsp;: la campagne suit son cours.
+          </p>
         </template>
       </article>
 
@@ -214,7 +254,7 @@ function formatShortDate(iso) {
             >
               <span class="card__kind">{{ kindLabel(event) }}</span>
               <span class="card__date">{{ formatShortDate(event.date) }}</span>
-              <span class="card__title">{{ event.title }}</span>
+              <span v-if="event.title" class="card__title">{{ event.title }}</span>
             </button>
           </li>
         </ul>
@@ -293,6 +333,10 @@ function formatShortDate(iso) {
   margin-bottom: 1rem;
 }
 
+.detail__seats--complet {
+  color: var(--text-muted);
+}
+
 .detail__seats {
   display: inline-block;
   margin-bottom: 1rem;
@@ -354,7 +398,7 @@ function formatShortDate(iso) {
 }
 
 .upcoming__arrow:hover:not(:disabled) {
-  box-shadow: var(--shadow-out);
+  box-shadow: var(--shadow-out-sm), var(--glow);
 }
 
 .upcoming__arrow:active:not(:disabled) {
@@ -398,12 +442,11 @@ function formatShortDate(iso) {
   text-align: left;
   cursor: pointer;
   box-shadow: var(--shadow-out);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: box-shadow 0.25s ease;
 }
 
 .card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-out-lg);
+  box-shadow: var(--shadow-out), var(--glow);
 }
 
 .card--open {

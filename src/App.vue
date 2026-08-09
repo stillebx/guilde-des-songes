@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import WelcomeFog from './components/WelcomeFog.vue'
+import PageAtmosphere from './components/PageAtmosphere.vue'
 import SiteHeader from './components/SiteHeader.vue'
 import SiteFooter from './components/SiteFooter.vue'
 
@@ -23,6 +24,9 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- Ambiance permanente : halos + brume derrière toutes les pages. -->
+  <PageAtmosphere />
+
   <SiteHeader />
   <main>
     <RouterView />

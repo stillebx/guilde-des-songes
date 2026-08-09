@@ -60,6 +60,11 @@ import IconGlyph from './IconGlyph.vue'
   padding: 1.4rem 1.25rem;
   text-align: center;
   box-shadow: var(--shadow-out);
+  transition: box-shadow 0.3s ease;
+}
+
+.practical__card:hover {
+  box-shadow: var(--shadow-out), var(--glow);
 }
 
 .practical__icon {

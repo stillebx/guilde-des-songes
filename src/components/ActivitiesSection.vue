@@ -44,8 +44,17 @@ const activities = [
 </template>
 
 <style scoped>
+/* Séparation douce entre sections : un voile aux couleurs du fond atténue la
+   brume sur cette bande — elle y paraît plus claire, plus dissipée — avec des
+   bords en dégradé pour qu'aucune ligne ne se voie. */
 .section--alt {
-  background: linear-gradient(180deg, transparent, var(--accent-soft) 20%, var(--accent-soft) 80%, transparent);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--bg) 78%, transparent) 18%,
+    color-mix(in srgb, var(--bg) 78%, transparent) 82%,
+    transparent
+  );
 }
 
 .activities {
@@ -61,12 +70,11 @@ const activities = [
   padding: 1.4rem 1.25rem;
   text-align: center;
   box-shadow: var(--shadow-out);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: box-shadow 0.3s ease;
 }
 
 .activity:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-out-lg);
+  box-shadow: var(--shadow-out), var(--glow);
 }
 
 .activity__icon {

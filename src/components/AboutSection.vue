@@ -119,6 +119,11 @@ import IconGlyph from './IconGlyph.vue'
   border-radius: var(--radius);
   padding: 0.75rem 1rem;
   box-shadow: var(--shadow-out);
+  transition: box-shadow 0.3s ease;
+}
+
+.about__value:hover {
+  box-shadow: var(--shadow-out), var(--glow);
 }
 
 .about__value-icon {

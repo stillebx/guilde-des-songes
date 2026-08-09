@@ -18,9 +18,16 @@ réseaux) vient de l'ancien site.
 
 ## Contenu à mettre à jour
 
-- **Agenda** : `src/data/events.js`. Les parties passées disparaissent automatiquement.
-  Un one-shot avec `signup` affiche un bouton « S'inscrire » (lien Discord/formulaire) ;
-  sans `signup`, la table est marquée fermée.
+- **Agenda** : piloté par une feuille Google (onglet « Événements » : date, horaire,
+  type, titre, jeu, lieu, MJ, description, places, lien Discord). Le site la lit au
+  chargement et affiche les places restantes ; les inscriptions s'y ajoutent, qu'elles
+  viennent du site ou soient saisies à la main. Mise en place dans
+  `docs/agenda-google-sheet.gs`, puis coller l'URL du déploiement dans
+  `SHEET_ENDPOINT` (`src/data/sheet.js`).
+  Tant que la feuille n'est pas configurée — ou si elle ne répond pas — le site
+  retombe sur les parties écrites dans `src/data/events.js`.
+  Les parties passées disparaissent automatiquement. Le type `mensuelle` ouvre le
+  formulaire d'inscription du site ; les autres renvoient au salon Discord.
 - **Gazette** : un fichier Markdown par numéro dans `src/gazette/` (front-matter
   `title` / `date` / `excerpt`). Déposer le fichier suffit : il est listé et publié.
 - **Partenaires** : `src/data/partners.js`.

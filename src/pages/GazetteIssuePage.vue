@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import IconGlyph from '../components/IconGlyph.vue'
-import PageAtmosphere from '../components/PageAtmosphere.vue'
 import { findIssue } from '../data/gazette.js'
 
 const route = useRoute()
@@ -25,8 +24,7 @@ function printIssue() {
 </script>
 
 <template>
-  <section class="section section--atmospheric">
-    <PageAtmosphere />
+  <section class="section">
     <div class="container">
       <RouterLink class="back" :to="{ name: 'gazette' }">← Tous les numéros</RouterLink>
 

@@ -15,7 +15,7 @@ export const events = [
   {
     date: '2026-10-10',
     time: '18h30 – 23h45',
-    kind: 'one-shot',
+    kind: 'mensuelle',
     title: 'Soirée one-shot mensuelle',
     game: 'Jeux variés',
     place: 'Espace Baudelaire',
@@ -25,7 +25,7 @@ export const events = [
   {
     date: '2026-11-21',
     time: '18h30 – 23h45',
-    kind: 'one-shot',
+    kind: 'mensuelle',
     title: 'Soirée one-shot mensuelle',
     game: 'Jeux variés',
     place: 'Espace Baudelaire',
@@ -35,7 +35,7 @@ export const events = [
   {
     date: '2026-12-12',
     time: '18h30 – 23h45',
-    kind: 'one-shot',
+    kind: 'mensuelle',
     title: 'Soirée one-shot mensuelle',
     game: 'Jeux variés',
     place: 'Espace Baudelaire',
@@ -70,4 +70,6 @@ export const KIND_LABELS = {
   'one-shot': 'One-shot',
   campagne: 'Campagne',
   solo: 'Partie solo',
+  mensuelle: 'Soirée mensuelle',
+  evenement: 'Événement',
 }
