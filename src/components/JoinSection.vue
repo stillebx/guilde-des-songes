@@ -1,5 +1,6 @@
 <script setup>
 import IconGlyph from './IconGlyph.vue'
+import { typo } from '../typographie.js'
 
 // Tarifs d'adhésion annuelle de l'association.
 const memberships = [
@@ -35,7 +36,7 @@ const memberships = [
           <span class="join__icon"><IconGlyph :name="membership.icon" /></span>
           <h3 class="join__name">{{ membership.name }}</h3>
           <p class="join__price">{{ membership.price }}</p>
-          <p class="join__detail">{{ membership.detail }}</p>
+          <p class="join__detail">{{ typo(membership.detail) }}</p>
         </article>
       </div>
     </div>

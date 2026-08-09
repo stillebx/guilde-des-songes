@@ -13,6 +13,7 @@
 // « Télécharger le numéro » le sert directement. Sans lui, le bouton passe par
 // l'impression du navigateur (« Enregistrer au format PDF »).
 import { marked } from 'marked'
+import { typo } from '../typographie.js'
 
 const files = import.meta.glob('../gazette/*.md', { query: '?raw', import: 'default', eager: true })
 
@@ -40,7 +41,12 @@ export const issues = Object.entries(files)
       date: meta.date || '',
       excerpt: meta.excerpt || '',
       pdf: meta.pdf || '',
-      html: marked.parse(body),
+      // Typographie appliquée au texte seul : les balises restent intactes.
+      html: marked
+        .parse(body)
+        .split(/(<[^>]*>)/)
+        .map((morceau) => (morceau.startsWith('<') ? morceau : typo(morceau)))
+        .join(''),
     }
   })
   // Plus récent en premier

@@ -3,8 +3,10 @@ import { computed, onMounted, ref, watch } from 'vue'
 import PageHeading from '../components/PageHeading.vue'
 import AgendaCalendar from '../components/AgendaCalendar.vue'
 import SignupForm from '../components/SignupForm.vue'
+import EventDialog from '../components/EventDialog.vue'
 import { events as localEvents, KIND_LABELS } from '../data/events.js'
 import { fetchAgenda, placesRestantes } from '../data/sheet.js'
+import { typo } from '../typographie.js'
 
 // Six vignettes par page (3 colonnes × 2 lignes) : la page reste courte quel
 // que soit le nombre de parties annoncées.
@@ -58,7 +60,18 @@ function estComplet(event) {
 // Les cellules laissées vides dans la feuille ne doivent laisser aucune trace :
 // on assemble les lignes d'information à partir des seuls champs remplis.
 function joindre(...parties) {
-  return parties.filter((p) => p && String(p).trim()).join(' · ')
+  return typo(parties.filter((p) => p && String(p).trim()).join(' · '))
+}
+
+// Une soirée mensuelle propose plusieurs tables : son étiquette se met au pluriel.
+function libelleJeu(event) {
+  return kindOf(event) === 'mensuelle' ? 'Jeux' : 'Jeu'
+}
+
+// La colonne MJ de la feuille contient souvent « MJ : Marc » : l'étiquette de la
+// vignette le dit déjà, on ne répète donc pas le préfixe.
+function sansPrefixeMJ(valeur) {
+  return String(valeur || '').replace(/^\s*MJ\s*:\s*/i, '')
 }
 
 function kindColor(event) {
@@ -73,20 +86,44 @@ const marks = computed(() =>
   })),
 )
 
-// Légende limitée aux types réellement présents dans l'agenda.
+// Légende complète : les quatre types sont toujours annoncés, même si l'agenda
+// n'en contient aucun ce mois-ci — le code couleur reste lisible d'emblée.
+// Un type supplémentaire réellement présent (partie solo) vient s'y ajouter.
+const TYPES_LEGENDE = ['campagne', 'one-shot', 'mensuelle', 'evenement']
+
 const legend = computed(() => {
-  const seen = new Map()
-  for (const event of sorted.value) {
-    const key = kindOf(event)
-    if (!seen.has(key)) seen.set(key, { label: kindLabel(event), color: kindColor(event) })
-  }
-  return [...seen.values()]
+  const presents = new Set(sorted.value.map(kindOf))
+  const types = [...TYPES_LEGENDE, ...[...presents].filter((t) => !TYPES_LEGENDE.includes(t))]
+
+  return types.map((type) => ({
+    label: KIND_LABELS[type] || type,
+    color: `var(--kind-${type})`,
+  }))
 })
 
-// Partie dont les détails sont ouverts (clé = date + titre), null = aucune.
-const openKey = ref(null)
+// Jour choisi dans le calendrier : ses lignes s'affichent sous le calendrier,
+// dans la page, comme avant.
+const openDate = ref(null)
 
-const openEvent = computed(() => sorted.value.find((event) => eventKey(event) === openKey.value))
+const openEvents = computed(() =>
+  openDate.value ? sorted.value.filter((item) => item.date === openDate.value) : [],
+)
+
+// Plusieurs lignes le même jour : panneaux resserrés, côte à côte.
+const detailsCompacts = computed(() => openEvents.value.length > 1)
+
+// Vignette ouverte en fenêtre au premier plan : une seule à la fois, elle en
+// occupe tout le cadre. Ouverte depuis « Prochaines échéances », ou depuis un
+// panneau resserré dont le texte ne tient pas en entier.
+const modalKey = ref(null)
+
+const modalEvent = computed(() =>
+  sorted.value.find((item) => eventKey(item) === modalKey.value),
+)
+
+const dialogTitre = computed(() =>
+  modalEvent.value ? formatDate(modalEvent.value.date) : '',
+)
 
 const page = ref(0)
 
@@ -101,22 +138,22 @@ watch(pageCount, (count) => {
   if (page.value > count - 1) page.value = count - 1
 })
 
-function toggleEvent(event) {
-  openKey.value = openKey.value === eventKey(event) ? null : eventKey(event)
+function fermerFenetre() {
+  modalKey.value = null
 }
 
-// Clic sur une pastille du calendrier : on ouvre la partie de ce jour et, si
-// elle est à venir, on amène la page de vignettes correspondante.
-function selectDate(iso) {
-  if (!iso) {
-    openKey.value = null
-    return
-  }
-  const event = sorted.value.find((item) => item.date === iso)
-  if (!event) return
-  openKey.value = eventKey(event)
+// Depuis « Prochaines échéances » : la vignette s'ouvre en fenêtre.
+function ouvrirFenetre(event) {
+  modalKey.value = eventKey(event)
+}
 
-  const index = upcoming.value.findIndex((item) => eventKey(item) === openKey.value)
+// Clic sur une pastille du calendrier : tout ce qui a lieu ce jour-là s'affiche
+// sous le calendrier, et la page de vignettes correspondante est amenée.
+function selectDate(iso) {
+  openDate.value = openDate.value === iso ? null : iso
+  if (!openDate.value) return
+
+  const index = upcoming.value.findIndex((item) => item.date === openDate.value)
   if (index !== -1) page.value = Math.floor(index / PAGE_SIZE)
 }
 
@@ -154,7 +191,7 @@ function formatShortDate(iso) {
 
       <AgendaCalendar
         :marks="marks"
-        :selected="openEvent ? openEvent.date : null"
+        :selected="openDate"
         :focus="upcoming.length ? upcoming[0].date : ''"
         @select="selectDate"
       />
@@ -166,62 +203,145 @@ function formatShortDate(iso) {
         </li>
       </ul>
 
-      <!-- Détails de la partie choisie, dans le calendrier ou dans les vignettes. -->
-      <article v-if="openEvent" class="detail" :style="{ '--kind-color': kindColor(openEvent) }">
-        <div class="detail__head">
-          <p class="detail__kind">{{ kindLabel(openEvent) }}</p>
-          <h2 class="detail__title">{{ openEvent.title }}</h2>
+      <!-- Jour choisi dans le calendrier : ses lignes s'affichent ici, dans la
+           page. À plusieurs, elles se resserrent côte à côte ; un clic ouvre
+           alors la vignette en fenêtre, où elle tient en entier. -->
+      <div v-if="openEvents.length" class="jour">
+        <p v-if="detailsCompacts" class="details__intro">
+          {{ openEvents.length }} rendez-vous le {{ formatDate(openDate) }}
+        </p>
+
+        <div class="details" :class="{ 'details--compacts': detailsCompacts }">
+        <component
+          :is="detailsCompacts ? 'button' : 'article'"
+          v-for="item in openEvents"
+          :key="eventKey(item)"
+          class="detail"
+          :class="{ 'detail--cliquable': detailsCompacts }"
+          :style="{ '--kind-color': kindColor(item) }"
+          :title="detailsCompacts ? 'Voir le détail' : undefined"
+          @click="detailsCompacts ? ouvrirFenetre(item) : null"
+        >
+          <p class="detail__kind">{{ kindLabel(item) }}</p>
+          <h2 class="detail__title">{{ typo(item.title) }}</h2>
           <p class="detail__when">
-            {{ joindre(formatDate(openEvent.date), openEvent.time, openEvent.place) }}
+            {{ joindre(item.time, item.place) }}
           </p>
-          <p v-if="joindre(openEvent.game, openEvent.gm)" class="detail__meta">
-            {{ joindre(openEvent.game, openEvent.gm) }}
+          <p v-if="item.game" class="detail__champ">
+            <span class="detail__etiquette">{{ libelleJeu(item) }}</span>{{ typo(item.game) }}
           </p>
+          <p v-if="item.gm" class="detail__champ">
+            <span class="detail__etiquette">MJ</span>{{ typo(sansPrefixeMJ(item.gm)) }}
+          </p>
+
+          <p v-if="item.text" class="detail__text detail__text--court">{{ typo(item.text) }}</p>
+
+          <!-- Zone d'action : dans la fenêtre, elle se centre dans l'espace resté
+               libre sous la description. -->
+          <div class="detail__actions">
+          <p v-if="item.date < today" class="detail__past">Cette partie a déjà eu lieu.</p>
+
+          <template v-else>
+            <p
+              v-if="placesLabel(item)"
+              class="detail__seats"
+              :class="{ 'detail__seats--complet': estComplet(item) }"
+            >
+              {{ placesLabel(item) }}
+            </p>
+
+            <p v-if="estComplet(item)" class="detail__closed">
+              Cette soirée affiche complet. Écrivez-nous sur le Discord pour la liste d'attente.
+            </p>
+
+            <SignupForm
+              v-else-if="item.form"
+              :title="item.title"
+              :date="item.date"
+              :time="item.time"
+              @inscrit="chargerAgenda"
+            />
+            <a
+              v-else-if="item.signup"
+              class="btn btn--primary detail__btn"
+              :href="item.signup"
+              target="_blank"
+              rel="noopener"
+            >
+              S'inscrire sur le Discord
+            </a>
+            <p v-else-if="item.kind === 'campagne'" class="detail__closed">
+              Table fermée&nbsp;: la campagne suit son cours.
+            </p>
+          </template>
+          </div>
+        </component>
         </div>
+      </div>
 
-        <p v-if="openEvent.text" class="detail__text">{{ openEvent.text }}</p>
-
-        <p v-if="openEvent.date < today" class="detail__past">Cette partie a déjà eu lieu.</p>
-
-        <template v-else>
-          <p v-if="placesLabel(openEvent)" class="detail__seats" :class="{ 'detail__seats--complet': estComplet(openEvent) }">
-            {{ placesLabel(openEvent) }}
+      <!-- Vignette sélectionnée : au premier plan, cadre de taille fixe. -->
+      <EventDialog v-if="modalEvent" :titre="dialogTitre" @close="fermerFenetre">
+        <article class="detail detail--fenetre" :style="{ '--kind-color': kindColor(modalEvent) }">
+          <p class="detail__kind">{{ kindLabel(modalEvent) }}</p>
+          <h2 class="detail__title">{{ typo(modalEvent.title) }}</h2>
+          <p class="detail__when">
+            {{ joindre(modalEvent.time, modalEvent.place) }}
+          </p>
+          <p v-if="modalEvent.game" class="detail__champ">
+            <span class="detail__etiquette">{{ libelleJeu(modalEvent) }}</span>{{ typo(modalEvent.game) }}
+          </p>
+          <p v-if="modalEvent.gm" class="detail__champ">
+            <span class="detail__etiquette">MJ</span>{{ typo(sansPrefixeMJ(modalEvent.gm)) }}
           </p>
 
-          <p v-if="estComplet(openEvent)" class="detail__closed">
-            Cette soirée affiche complet. Écrivez-nous sur le Discord pour la liste d'attente.
-          </p>
+          <p v-if="modalEvent.text" class="detail__text">{{ typo(modalEvent.text) }}</p>
 
-          <!-- Soirée mensuelle ouverte à tous : inscription directe par formulaire. -->
-          <SignupForm
-            v-else-if="openEvent.form"
-            :title="openEvent.title"
-            :date="openEvent.date"
-            :time="openEvent.time"
-            @inscrit="chargerAgenda"
-          />
-          <!-- Partie classique : le MJ gère les inscriptions dans son salon. -->
-          <a
-            v-else-if="openEvent.signup"
-            class="btn btn--primary detail__btn"
-            :href="openEvent.signup"
-            target="_blank"
-            rel="noopener"
-          >
-            S'inscrire sur le Discord
-          </a>
-          <!-- Sans lien d'inscription : on ne le dit que si la mention a du sens.
-               Un événement hors partie n'a pas de « table » à fermer. -->
-          <p v-else-if="openEvent.kind === 'campagne'" class="detail__closed">
-            Table fermée&nbsp;: la campagne suit son cours.
-          </p>
-        </template>
-      </article>
+          <!-- Zone d'action : dans la fenêtre, elle se centre dans l'espace resté
+               libre sous la description. -->
+          <div class="detail__actions">
+          <p v-if="modalEvent.date < today" class="detail__past">Cette partie a déjà eu lieu.</p>
+
+          <template v-else>
+            <p
+              v-if="placesLabel(modalEvent)"
+              class="detail__seats"
+              :class="{ 'detail__seats--complet': estComplet(modalEvent) }"
+            >
+              {{ placesLabel(modalEvent) }}
+            </p>
+
+            <p v-if="estComplet(modalEvent)" class="detail__closed">
+              Cette soirée affiche complet. Écrivez-nous sur le Discord pour la liste d'attente.
+            </p>
+
+            <SignupForm
+              v-else-if="modalEvent.form"
+              :title="modalEvent.title"
+              :date="modalEvent.date"
+              :time="modalEvent.time"
+              @inscrit="chargerAgenda"
+            />
+            <a
+              v-else-if="modalEvent.signup"
+              class="btn btn--primary detail__btn"
+              :href="modalEvent.signup"
+              target="_blank"
+              rel="noopener"
+            >
+              S'inscrire sur le Discord
+            </a>
+            <p v-else-if="modalEvent.kind === 'campagne'" class="detail__closed">
+              Table fermée&nbsp;: la campagne suit son cours.
+            </p>
+          </template>
+          </div>
+        </article>
+      </EventDialog>
 
       <!-- Vignettes minimalistes : le détail s'ouvre au clic. -->
       <div v-if="upcoming.length" class="upcoming">
         <div class="upcoming__head">
-          <h2 class="upcoming__title">Prochaines parties</h2>
+          <h2 class="upcoming__title">Prochaines échéances</h2>
           <div v-if="pageCount > 1" class="upcoming__nav">
             <button
               class="upcoming__arrow"
@@ -247,14 +367,21 @@ function formatShortDate(iso) {
           <li v-for="event in paged" :key="eventKey(event)">
             <button
               class="card"
-              :class="{ 'card--open': openKey === eventKey(event) }"
+              :class="{ 'card--open': modalKey === eventKey(event) }"
               :style="{ '--kind-color': kindColor(event) }"
-              :aria-expanded="openKey === eventKey(event)"
-              @click="toggleEvent(event)"
+              :aria-haspopup="'dialog'"
+              @click="ouvrirFenetre(event)"
             >
               <span class="card__kind">{{ kindLabel(event) }}</span>
               <span class="card__date">{{ formatShortDate(event.date) }}</span>
-              <span v-if="event.title" class="card__title">{{ event.title }}</span>
+              <span v-if="event.title" class="card__title">{{ typo(event.title) }}</span>
+              <span v-if="event.game" class="card__champ">
+                <span class="card__etiquette">{{ libelleJeu(event) }}</span>{{ typo(event.game) }}
+              </span>
+              <span v-if="event.gm" class="card__champ">
+                <span class="card__etiquette">MJ</span>{{ typo(sansPrefixeMJ(event.gm)) }}
+              </span>
+              <span v-if="event.text" class="card__text">{{ typo(event.text) }}</span>
             </button>
           </li>
         </ul>
@@ -293,14 +420,107 @@ function formatShortDate(iso) {
   border-radius: 50%;
 }
 
-/* Panneau de détails : liseré à la couleur du type de partie */
-.detail {
+/* Panneaux du jour choisi : dans la page, sur toute sa largeur. L'intitulé du
+   jour reste hors de la grille — un élément qui la traverse empêcherait les
+   colonnes vides de s'effacer, et les panneaux ne s'étireraient pas. */
+.jour {
   margin-top: 1.75rem;
+}
+
+.details {
+  display: grid;
+  gap: 1rem;
+}
+
+.details--compacts {
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  align-items: stretch;
+}
+
+.details__intro {
+  margin-bottom: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Panneau de détails : liseré à la couleur du type */
+.detail {
   padding: 1.5rem 1.75rem;
+  border: none;
   border-left: 5px solid var(--kind-color);
   border-radius: var(--radius);
   background: var(--bg-panel);
+  color: var(--text);
+  font-family: var(--font-body);
+  text-align: left;
   box-shadow: var(--shadow-out);
+}
+
+/* Resserré : le texte est borné, et la vignette s'ouvre en fenêtre au clic. */
+.details--compacts .detail {
+  padding: 1.1rem 1.25rem;
+}
+
+.details--compacts .detail__title {
+  font-size: 1.2rem;
+}
+
+.detail--cliquable {
+  width: 100%;
+  cursor: pointer;
+  transition: box-shadow 0.25s ease;
+}
+
+.detail--cliquable:hover {
+  box-shadow: var(--shadow-out), var(--glow);
+}
+
+.detail__text--court {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Dans la fenêtre, la vignette occupe tout le cadre, en hauteur comme en
+   largeur : ni relief ni fond propres, et l'action reste en bas. */
+.detail--fenetre {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 0 0 1.25rem;
+  background: none;
+  box-shadow: none;
+}
+
+/* La marge basse du texte fausserait le centrage : l'écart est porté par la
+   zone d'action elle-même. */
+.detail--fenetre .detail__text {
+  margin-bottom: 0;
+}
+
+/* L'action occupe l'espace resté libre sous la description, et s'y centre —
+   verticalement comme horizontalement. */
+.detail--fenetre .detail__actions {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+}
+
+.detail--fenetre .detail__seats,
+.detail--fenetre .detail__closed,
+.detail--fenetre .detail__past {
+  text-align: center;
+}
+
+/* Le formulaire garde une largeur confortable sans s'étirer sur tout le cadre. */
+.detail--fenetre :deep(.signup),
+.detail--fenetre :deep(.signup__done) {
+  width: min(440px, 100%);
 }
 
 .detail__kind {
@@ -323,18 +543,43 @@ function formatShortDate(iso) {
   margin-bottom: 0.2rem;
 }
 
-.detail__meta {
-  color: var(--text-muted);
-  margin-bottom: 0.8rem;
+.detail__champ {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.4;
 }
 
+.detail__etiquette {
+  color: var(--kind-color);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-right: 0.45rem;
+}
+
+.detail__champ + .detail__text,
+.detail__when + .detail__text {
+  margin-top: 0.8rem;
+}
+
+/* Corps du texte justifié, comme le reste du site. */
 .detail__text {
   color: var(--text-muted);
   margin-bottom: 1rem;
+  text-align: justify;
 }
 
 .detail__seats--complet {
   color: var(--text-muted);
+}
+
+.detail__actions {
+  display: contents;
+}
+
+.detail--fenetre .detail__actions {
+  display: flex;
 }
 
 .detail__seats {
@@ -417,12 +662,15 @@ function formatShortDate(iso) {
 }
 
 /* Trois colonnes de deux vignettes, sans défilement interne */
+/* Le nombre de vignettes par ligne suit la largeur de la page : trois sur un
+   grand écran, deux sur une tablette, une sur un téléphone — sans point de
+   rupture à maintenir. */
 .cards {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -469,9 +717,35 @@ function formatShortDate(iso) {
 }
 
 .card__title {
-  color: var(--text-muted);
-  font-size: 1rem;
+  font-size: 1.05rem;
   line-height: 1.35;
+}
+
+/* Jeu et MJ, précédés de leur intitulé : lisibles d'un coup d'œil. */
+.card__champ {
+  color: var(--text);
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+.card__etiquette {
+  color: var(--kind-color);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-right: 0.45rem;
+}
+
+/* Extrait borné à deux lignes : la description complète s'ouvre au clic. */
+.card__text {
+  color: var(--text-muted);
+  font-size: 0.98rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .agenda__empty {
@@ -479,18 +753,8 @@ function formatShortDate(iso) {
   color: var(--text-muted);
 }
 
-@media (max-width: 900px) {
-  .cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 620px) {
-  .cards {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .detail {
+.detail {
     padding: 1.25rem;
   }
 }

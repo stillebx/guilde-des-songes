@@ -1,3 +1,5 @@
+import { typo } from '../typographie.js'
+
 // Lien avec la feuille Google qui pilote l'agenda et reçoit les inscriptions.
 //
 // Coller ici l'URL du déploiement Apps Script (elle finit par /exec) — la marche
@@ -5,7 +7,7 @@
 // constante est vide, le site fonctionne sur les parties écrites en dur dans
 // src/data/events.js : rien ne casse, mais les places ne se décomptent pas.
 export const SHEET_ENDPOINT =
-  'https://script.google.com/macros/s/AKfycbzwQfTkzY04XUoGOBL8efvLjLPUSnKSKKgMTXgHsbLFjVExa-mUJys_q1Jj4Hdwt8Y6hQ/exec'
+  'https://script.google.com/macros/s/AKfycbwlwLChRf3RMtjSH23hC22chzlmPUiXu17E4J5iAK8vvTACFUQQqsvrc1dC5g54DEheBA/exec'
 
 // Les requêtes partent en `text/plain` : c'est une requête « simple », donc sans
 // pré-vol CORS — Apps Script ne répond pas aux requêtes OPTIONS.
@@ -100,13 +102,13 @@ function versEvenement(ligne) {
 
   return {
     date: normaliserDate(ligne.date),
-    time: ligne.horaire,
+    time: typo(ligne.horaire),
     kind: normaliserType(ligne.type),
-    title: ligne.titre,
-    game: ligne.jeu,
-    place: ligne.lieu,
-    gm: ligne.mj,
-    text: ligne.description,
+    title: typo(ligne.titre),
+    game: typo(ligne.jeu),
+    place: typo(ligne.lieu),
+    gm: typo(ligne.mj),
+    text: typo(ligne.description),
     places: places,
     inscrits: Number(ligne.inscrits) || 0,
     // C'est le nombre de places qui ouvre les inscriptions en ligne, quel que

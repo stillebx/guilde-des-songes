@@ -1,5 +1,6 @@
 <script setup>
 import IconGlyph from './IconGlyph.vue'
+import { typo } from '../typographie.js'
 
 const activities = [
   {
@@ -29,7 +30,7 @@ const activities = [
         <article v-for="activity in activities" :key="activity.title" class="activity">
           <span class="activity__icon"><IconGlyph :name="activity.icon" /></span>
           <h3 class="activity__title">{{ activity.title }}</h3>
-          <p class="activity__text">{{ activity.text }}</p>
+          <p class="activity__text">{{ typo(activity.text) }}</p>
         </article>
       </div>
       <p class="activities__note">

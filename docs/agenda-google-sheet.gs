@@ -81,7 +81,7 @@ const COLONNES_MENSUELLES = [
   { nom: 'Date', largeur: 110, aide: "Date de la soirée. Tapez 10/10/2026 : la colonne l'affiche en 2026-10-10." },
   { nom: 'Horaire', largeur: 140, aide: 'Ex. 18h30 – 23h45.' },
   { nom: 'Titre', largeur: 240, aide: 'Ex. « Soirée one-shot mensuelle ».' },
-  { nom: 'Jeu', largeur: 170, aide: 'Ex. « Jeux variés ». Peut rester vide.' },
+  { nom: 'Jeux', largeur: 170, aide: 'Jeux proposés ce soir-là. Ex. « Jeux variés ». Peut rester vide.' },
   { nom: 'Lieu', largeur: 170, aide: 'Ex. « Espace Baudelaire ».' },
   { nom: 'MJ', largeur: 140, aide: 'Peut rester vide.' },
   { nom: 'Description', largeur: 380, aide: 'Présentation de la soirée sur le site.' },
@@ -442,7 +442,20 @@ function versDateIso(valeur) {
 /*  Service lu par le site                                             */
 /* ------------------------------------------------------------------ */
 
-/** Lignes d'un onglet sous forme d'objets, indexés par en-tête. */
+/**
+ * Clé d'en-tête tolérante : sans accents, sans majuscules, sans pluriel.
+ * « Jeux », « Jeu », « JEU » donnent tous « jeu » ; « Places » donne « place ».
+ * Une colonne renommée au pluriel continue donc d'être lue.
+ */
+function cleEntete(nom) {
+  // Pluriel retiré, en « s » comme en « x » : « jeux » → « jeu ».
+  return simplifier(nom).replace(/[sx]$/, '')
+}
+
+/**
+ * Lignes d'un onglet sous forme d'objets. Chaque valeur est accessible par
+ * l'intitulé exact de la colonne ET par sa clé tolérante.
+ */
 function lignes(nomOnglet) {
   const feuille = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nomOnglet)
   if (!feuille || feuille.getLastRow() < 2) return []
@@ -452,9 +465,18 @@ function lignes(nomOnglet) {
 
   return valeurs.slice(1).map((ligne) => {
     const objet = {}
-    entetes.forEach((entete, i) => (objet[entete] = ligne[i]))
+    entetes.forEach((entete, i) => {
+      objet[entete] = ligne[i]
+      objet[cleEntete(entete)] = ligne[i]
+    })
     return objet
   })
+}
+
+/** Valeur d'une colonne, quel que soit l'accent, la casse ou le pluriel. */
+function champ(ligne, nom) {
+  const valeur = ligne[nom]
+  return valeur === undefined ? ligne[cleEntete(nom)] : valeur
 }
 
 function texte(valeur) {
@@ -468,9 +490,9 @@ function texte(valeur) {
 function compterInscrits(inscriptions, date, titre) {
   return inscriptions.filter(function (i) {
     // Les lignes de fin de soirée ne sont pas des inscriptions.
-    if (texte(i["Date de l'inscription"]).indexOf('—') === 0) return false
-    if (versDateIso(i['Date']) !== date) return false
-    const intitule = texte(i['Intitulé'])
+    if (texte(champ(i, "Date de l'inscription")).indexOf('—') === 0) return false
+    if (versDateIso(champ(i, 'Date')) !== date) return false
+    const intitule = texte(champ(i, 'Intitulé'))
     return !intitule || intitule.toLowerCase() === String(titre).toLowerCase()
   }).length
 }
@@ -482,41 +504,43 @@ function doGet() {
     const inscriptionsOS = lignes(ONGLET_INSCRIPTIONS_OS)
 
     const parties = lignes(ONGLET_EVENEMENTS)
-      .filter((l) => versDateIso(l['Date']) && texte(l['Titre']))
+      .filter((l) => versDateIso(champ(l, 'Date')) && texte(champ(l, 'Titre')))
       .map((l) => {
-        const date = versDateIso(l['Date'])
-        const titre = texte(l['Titre'])
+        const date = versDateIso(champ(l, 'Date'))
+        const titre = texte(champ(l, 'Titre'))
         return {
           date: date,
-          horaire: normaliserHoraire(l['Horaire'] || ''),
-          type: normaliserType(l['Type'] || ''),
+          horaire: normaliserHoraire(champ(l, 'Horaire') || ''),
+          type: normaliserType(champ(l, 'Type') || ''),
           titre: titre,
-          jeu: texte(l['Jeu']),
-          lieu: texte(l['Lieu']),
-          mj: texte(l['MJ']),
-          description: texte(l['Description']),
-          places: Number(l['Places']) || 0,
-          lien: texte(l['Lien Discord']),
+          jeu: texte(champ(l, 'Jeu')),
+          lieu: texte(champ(l, 'Lieu')),
+          mj: texte(champ(l, 'MJ')),
+          description: texte(champ(l, 'Description')),
+          places: Number(champ(l, 'Places')) || 0,
+          lien: texte(champ(l, 'Lien Discord')),
           inscrits: compterInscrits(inscriptionsEv, date, titre),
         }
       })
 
     const mensuelles = lignes(ONGLET_MENSUELLES)
-      .filter((l) => versDateIso(l['Date']) && texte(l['Titre']))
+      .filter((l) => versDateIso(champ(l, 'Date')) && texte(champ(l, 'Titre')))
       .map((l) => {
-        const date = versDateIso(l['Date'])
+        const date = versDateIso(champ(l, 'Date'))
         return {
           date: date,
-          horaire: normaliserHoraire(l['Horaire'] || ''),
+          horaire: normaliserHoraire(champ(l, 'Horaire') || ''),
           type: 'mensuelle',
-          titre: texte(l['Titre']),
-          jeu: texte(l['Jeu']),
-          lieu: texte(l['Lieu']),
-          mj: texte(l['MJ']),
-          description: texte(l['Description']),
-          places: Number(l['Places']) || 0,
+          titre: texte(champ(l, 'Titre')),
+          // « Jeux » pour les soirées mensuelles, « Jeu » si la feuille garde
+          // l'ancien intitulé : les deux sont acceptés.
+          jeu: texte(champ(l, 'Jeu')),
+          lieu: texte(champ(l, 'Lieu')),
+          mj: texte(champ(l, 'MJ')),
+          description: texte(champ(l, 'Description')),
+          places: Number(champ(l, 'Places')) || 0,
           lien: '',
-          inscrits: compterInscrits(inscriptionsOS, date, texte(l['Titre'])),
+          inscrits: compterInscrits(inscriptionsOS, date, texte(champ(l, 'Titre'))),
         }
       })
 
@@ -546,25 +570,25 @@ function doPost(e) {
     // puis parmi les événements : chacune a son propre registre d'inscriptions.
     const titre = texte(donnees.soiree)
 
-    let source = lignes(ONGLET_MENSUELLES).find((l) => versDateIso(l['Date']) === dateSoiree)
+    let source = lignes(ONGLET_MENSUELLES).find((l) => versDateIso(champ(l, 'Date')) === dateSoiree)
     let registre = ONGLET_INSCRIPTIONS_OS
 
     if (!source) {
       source = lignes(ONGLET_EVENEMENTS).find(
         (l) =>
-          versDateIso(l['Date']) === dateSoiree &&
-          (!titre || texte(l['Titre']).toLowerCase() === titre.toLowerCase()),
+          versDateIso(champ(l, 'Date')) === dateSoiree &&
+          (!titre || texte(champ(l, 'Titre')).toLowerCase() === titre.toLowerCase()),
       )
       registre = ONGLET_INSCRIPTIONS_EVENEMENTS
     }
 
     if (!source) return reponse({ ok: false, erreur: 'aucune ligne à cette date' })
 
-    const places = Number(source['Places']) || 0
+    const places = Number(champ(source, 'Places')) || 0
     if (!places) return reponse({ ok: false, erreur: 'inscriptions fermées' })
 
     const inscrits = lignes(registre).filter(
-      (i) => versDateIso(i['Date']) === dateSoiree,
+      (i) => versDateIso(champ(i, 'Date')) === dateSoiree,
     )
 
     if (inscrits.length >= places) {

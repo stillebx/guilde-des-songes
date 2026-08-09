@@ -3,6 +3,7 @@ import IconGlyph from '../components/IconGlyph.vue'
 import ContactLink from '../components/ContactLink.vue'
 import PageHeading from '../components/PageHeading.vue'
 import { partners } from '../data/partners.js'
+import { typo } from '../typographie.js'
 </script>
 
 <template>
@@ -26,18 +27,18 @@ import { partners } from '../data/partners.js'
         >
           <header class="partner__head">
             <span class="partner__icon"><IconGlyph :name="partner.icon" /></span>
-            <h2 class="partner__name">{{ partner.name }}</h2>
-            <p class="partner__address">{{ partner.address }}</p>
+            <h2 class="partner__name">{{ typo(partner.name) }}</h2>
+            <p class="partner__address">{{ typo(partner.address) }}</p>
           </header>
 
           <div class="partner__body">
-            <p class="partner__text">{{ partner.text }}</p>
+            <p class="partner__text">{{ typo(partner.text) }}</p>
           </div>
 
           <!-- Zone basse toujours présente : les descriptions restent alignées
                d'une vignette à l'autre, avec ou sans avantage adhérent. -->
           <div class="partner__foot">
-            <span v-if="partner.perk" class="partner__perk">{{ partner.perk }}</span>
+            <span v-if="partner.perk" class="partner__perk">{{ typo(partner.perk) }}</span>
           </div>
         </component>
       </div>

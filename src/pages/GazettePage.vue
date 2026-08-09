@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import IconGlyph from '../components/IconGlyph.vue'
 import PageHeading from '../components/PageHeading.vue'
 import { issues } from '../data/gazette.js'
+import { typo } from '../typographie.js'
 
 const router = useRouter()
 
@@ -36,8 +37,8 @@ async function downloadIssue(issue) {
       <ul v-if="issues.length" class="issues">
         <li v-for="issue in issues" :key="issue.slug" class="issue">
           <p class="issue__date">{{ formatMonth(issue.date) }}</p>
-          <h2 class="issue__title">{{ issue.title }}</h2>
-          <p v-if="issue.excerpt" class="issue__excerpt">{{ issue.excerpt }}</p>
+          <h2 class="issue__title">{{ typo(issue.title) }}</h2>
+          <p v-if="issue.excerpt" class="issue__excerpt">{{ typo(issue.excerpt) }}</p>
 
           <div class="issue__actions">
             <RouterLink
