@@ -7,7 +7,7 @@ export const partners = [
     name: 'Espace Baudelaire',
     address: '27 avenue Charles Baudelaire, 21000 Dijon',
     text: "L'Espace accueille la Guilde chaque semaine. C'est aussi le lieu mensuel de nos soirées One Shot.",
-    href: 'https://www.dijon.fr/annuaire/espace-baudelaire-envers-baudelaire/',
+    href: 'https://www.espacebaudelaire.fr/',
   },
   {
     icon: 'pawn',
