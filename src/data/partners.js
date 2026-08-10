@@ -3,6 +3,13 @@
 // `href` et `perk` sont optionnels (sans `href`, la carte n'est pas cliquable).
 export const partners = [
   {
+    icon: 'house',
+    name: 'La Maison Phare',
+    address: '1 allée du Roussillon, 21000 Dijon',
+    text: "L'Annexe de la Maison Phare héberge les locaux de la Guilde. C'est ici que se tiennent la plupart des parties et des événements.",
+    href: 'https://lamaisonphare.fr/',
+  },
+  {
     icon: 'pin',
     name: 'Espace Baudelaire',
     address: '27 avenue Charles Baudelaire, 21000 Dijon',
