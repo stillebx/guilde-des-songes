@@ -30,7 +30,8 @@ const memberships = [
         annuelle afin de profiter de tous les événements et de l'accès aux locaux. Il est
         possible de venir découvrir La Guilde et ses membres avant de vous engager,
         trois séances de campagne sont proposées gratuitement&nbsp;! Les
-        inscriptions et adhésions se font sur notre
+        inscriptions et adhésions se font dans
+        <RouterLink :to="{ name: 'agenda' }">l'agenda</RouterLink> ou sur notre
         <a href="https://discord.gg/F8aghJ2Mpv" target="_blank" rel="noopener">Discord</a>.
       </p>
       <div class="join__channels">
