@@ -1,6 +1,7 @@
 <script setup>
 import IconGlyph from './IconGlyph.vue'
 import { socials, openContact } from '../socials.js'
+import { soutiens } from '../data/soutiens.js'
 
 // Année du copyright calculée : rien à retoucher au 1er janvier.
 const annee = new Date().getFullYear()
@@ -35,6 +36,23 @@ const annee = new Date().getFullYear()
           <IconGlyph :name="social.icon" />
         </component>
       </div>
+    </div>
+
+    <!-- Collectivités qui soutiennent la Guilde : une ligne à part, sous la
+         bande, pour rester discrète sans se confondre avec nos propres liens. -->
+    <div v-if="soutiens.length" class="container footer__soutiens">
+      <component
+        :is="soutien.href ? 'a' : 'span'"
+        v-for="soutien in soutiens"
+        :key="soutien.alt"
+        class="footer__soutien"
+        :class="{ 'footer__soutien--inverser': soutien.inverser }"
+        :href="soutien.href"
+        :target="soutien.href ? '_blank' : undefined"
+        :rel="soutien.href ? 'noopener' : undefined"
+      >
+        <img :src="soutien.src" :alt="soutien.alt" />
+      </component>
     </div>
   </footer>
 </template>
@@ -98,6 +116,44 @@ const annee = new Date().getFullYear()
   gap: 0.6rem;
 }
 
+/* Soutiens institutionnels : petits, en retrait, séparés par un filet ténu.
+   Ils créditent, ils ne sollicitent pas le clic. */
+.footer__soutiens {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6rem;
+  padding: 0.7rem 0 0.9rem;
+  border-top: 1px solid var(--shadow-dark);
+}
+
+.footer__soutien img {
+  display: block;
+  height: 30px;
+  width: auto;
+  opacity: 0.55;
+  transition: opacity 0.25s ease;
+}
+
+.footer__soutien:hover img {
+  opacity: 1;
+}
+
+/* Ces logos sont dessinés pour du papier blanc : sur fond sombre, on les
+   remonte un peu. Un logo en couleurs garde ses teintes ; un logo monochrome
+   noir (`inverser`) deviendrait invisible et passe donc en blanc. */
+:root[data-theme='dark'] .footer__soutien img {
+  opacity: 0.75;
+}
+
+:root[data-theme='dark'] .footer__soutien--inverser img {
+  filter: invert(1) brightness(1.1);
+}
+
+:root[data-theme='dark'] .footer__soutien:hover img {
+  opacity: 1;
+}
+
 /* En mobile, le pied se réduit à l'essentiel — logo, mention et copyright. Les
    réseaux sont déjà dans le menu de l'entête : empilés ici, ils faisaient
    manger un tiers de l'écran à la bande. */
@@ -119,6 +175,16 @@ const annee = new Date().getFullYear()
 
   .footer__socials {
     display: none;
+  }
+
+  /* Encore plus petits en mobile : la bande doit rester basse. */
+  .footer__soutiens {
+    gap: 1.2rem;
+    padding: 0.5rem 0 0.7rem;
+  }
+
+  .footer__soutien img {
+    height: 24px;
   }
 }
 </style>
