@@ -29,7 +29,7 @@ const memberships = [
         Pour une meilleure immersion rôlistique, la Guilde vous propose une adhésion
         annuelle afin de profiter de tous les événements et de l'accès aux locaux. Il est
         possible de venir découvrir la Guilde et ses membres avant de vous engager,
-        trois séances de campagne sont proposées gratuitement&nbsp;! Les
+        trois séances de découverte sont proposées gratuitement&nbsp;! Les
         inscriptions et adhésions se font dans
         <RouterLink :to="{ name: 'agenda' }">l'agenda</RouterLink> ou sur notre
         <a href="https://discord.gg/F8aghJ2Mpv" target="_blank" rel="noopener">Discord</a>.

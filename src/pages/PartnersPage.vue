@@ -139,10 +139,13 @@ import { typo } from '../typographie.js'
   padding: 0.4rem 0;
 }
 
+/* `pre-line` : les `\n` de la description passent à la ligne, le reste du
+   texte continue de se replier normalement selon la largeur. */
 .partner__text {
   color: var(--text-muted);
   font-size: var(--card-text-size);
   line-height: 1.4;
+  white-space: pre-line;
 }
 
 /* Hauteur réservée dans chaque vignette, badge ou non : les descriptions
