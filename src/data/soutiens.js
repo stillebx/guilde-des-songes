@@ -10,16 +10,19 @@
 //   inverser : `true` pour un logo monochrome noir, illisible sur fond sombre —
 //              le thème sombre l'inverse alors en blanc. À laisser de côté pour
 //              un logo en couleurs, que l'inversion abîmerait.
+// Les deux fichiers viennent des chartes graphiques officielles, en version
+// monochrome noire : cotedor.fr/charte-graphique et dijon.fr/pack-logos-ville-de-dijon.
 export const soutiens = [
-  // {
-  //   src: '/soutiens/cote-dor.png',
-  //   alt: "Département de la Côte-d'Or",
-  //   href: 'https://www.cotedor.fr/',
-  // },
-  // {
-  //   src: '/soutiens/ville-de-dijon.png',
-  //   alt: 'Ville de Dijon',
-  //   href: 'https://www.dijon.fr/',
-  //   inverser: true,
-  // },
+  {
+    src: '/soutiens/cote-dor.png',
+    alt: "Département de la Côte-d'Or",
+    href: 'https://www.cotedor.fr/',
+    inverser: true,
+  },
+  {
+    src: '/soutiens/ville-de-dijon.png',
+    alt: 'Ville de Dijon',
+    href: 'https://www.dijon.fr/',
+    inverser: true,
+  },
 ]

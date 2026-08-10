@@ -129,7 +129,9 @@ const annee = new Date().getFullYear()
 
 .footer__soutien img {
   display: block;
-  height: 30px;
+  /* 36 px : en dessous, la ligne « LE DÉPARTEMENT » du logo Côte-d'Or n'est
+     plus lisible. C'est l'opacité, pas la taille, qui les met en retrait. */
+  height: 36px;
   width: auto;
   opacity: 0.55;
   transition: opacity 0.25s ease;
@@ -184,7 +186,7 @@ const annee = new Date().getFullYear()
   }
 
   .footer__soutien img {
-    height: 24px;
+    height: 28px;
   }
 }
 </style>
