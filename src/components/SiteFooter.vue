@@ -17,10 +17,25 @@ function urlLogo(chemin) {
 <template>
   <footer class="footer">
     <div class="container footer__inner">
-      <p class="footer__brand">
-        <img class="footer__logo" src="/logo-guilde.png" alt="" />
-        La Guilde des Songes
-      </p>
+      <!-- Bloc de gauche : le logo de la Guilde, puis ceux des collectivités qui
+           la soutiennent. Le nom de l'association n'est pas répété ici — il est
+           dans le copyright, deux lignes plus loin. -->
+      <div class="footer__brand">
+        <img class="footer__logo" src="/logo-guilde.png" alt="La Guilde des Songes" />
+
+        <component
+          :is="soutien.href ? 'a' : 'span'"
+          v-for="soutien in soutiens"
+          :key="soutien.alt"
+          class="footer__soutien"
+          :class="{ 'footer__soutien--inverser': soutien.inverser }"
+          :href="soutien.href"
+          :target="soutien.href ? '_blank' : undefined"
+          :rel="soutien.href ? 'noopener' : undefined"
+        >
+          <img :src="urlLogo(soutien.src)" :alt="soutien.alt" />
+        </component>
+      </div>
       <!-- Groupe central : mention et copyright. Pas de plan du site — la
            navigation vit dans l'entête, présente sur toute la hauteur. -->
       <div class="footer__center">
@@ -44,23 +59,6 @@ function urlLogo(chemin) {
         </component>
       </div>
     </div>
-
-    <!-- Collectivités qui soutiennent la Guilde : une ligne à part, sous la
-         bande, pour rester discrète sans se confondre avec nos propres liens. -->
-    <div v-if="soutiens.length" class="container footer__soutiens">
-      <component
-        :is="soutien.href ? 'a' : 'span'"
-        v-for="soutien in soutiens"
-        :key="soutien.alt"
-        class="footer__soutien"
-        :class="{ 'footer__soutien--inverser': soutien.inverser }"
-        :href="soutien.href"
-        :target="soutien.href ? '_blank' : undefined"
-        :rel="soutien.href ? 'noopener' : undefined"
-      >
-        <img :src="urlLogo(soutien.src)" :alt="soutien.alt" />
-      </component>
-    </div>
   </footer>
 </template>
 
@@ -80,13 +78,9 @@ function urlLogo(chemin) {
 }
 
 .footer__brand {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.7rem;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.1rem;
-  white-space: nowrap;
+  gap: 1.1rem;
 }
 
 .footer__logo {
@@ -123,17 +117,8 @@ function urlLogo(chemin) {
   gap: 0.6rem;
 }
 
-/* Soutiens institutionnels : petits, en retrait, séparés par un filet ténu.
-   Ils créditent, ils ne sollicitent pas le clic. */
-.footer__soutiens {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.6rem;
-  padding: 0.7rem 0 0.9rem;
-  border-top: 1px solid var(--shadow-dark);
-}
-
+/* Soutiens institutionnels : posés à côté du logo de la Guilde, plus petits
+   que lui et en retrait. Ils créditent, ils ne sollicitent pas le clic. */
 .footer__soutien img {
   display: block;
   /* 36 px : en dessous, la ligne « LE DÉPARTEMENT » du logo Côte-d'Or n'est
@@ -175,7 +160,7 @@ function urlLogo(chemin) {
   }
 
   .footer__brand {
-    font-size: 1rem;
+    gap: 0.9rem;
   }
 
   .footer__logo {
@@ -187,13 +172,8 @@ function urlLogo(chemin) {
   }
 
   /* Encore plus petits en mobile : la bande doit rester basse. */
-  .footer__soutiens {
-    gap: 1.2rem;
-    padding: 0.5rem 0 0.7rem;
-  }
-
   .footer__soutien img {
-    height: 28px;
+    height: 26px;
   }
 }
 </style>
