@@ -2,21 +2,23 @@
 import IconGlyph from './IconGlyph.vue'
 import { typo } from '../typographie.js'
 
+// Dans `text`, un `\n` part à la ligne : les vignettes se lisent en deux blocs
+// plutôt qu'en un pavé (`white-space: pre-line` sur .activity__text).
 const activities = [
   {
     icon: 'map',
     title: 'Campagnes',
-    text: 'Des histoires au long cours, séance après séance, où vos personnages évoluent et tracent leurs destins.',
+    text: 'Des histoires au long cours, séance après séance, où vos personnages évoluent et tracent leurs destins.\nCoopération et entraide sont de mise !',
   },
   {
     icon: 'swords',
     title: 'Soirées one-shot',
-    text: 'Une histoire complète en une soirée. Parfait pour essayer un nouveau jeu, une nouvelle table. Émotions garanties !',
+    text: 'Une histoire complète en une soirée.\nParfait pour essayer un nouveau jeu, une nouvelle table. Émotions garanties !',
   },
   {
-    icon: 'moon',
-    title: 'Parties solo',
-    text: 'Un·e joueur·se, un·e MJ : une aventure sur mesure, idéale pour découvrir un univers ou vivre un récit intimiste.',
+    icon: 'pawn',
+    title: 'Jeux de plateau',
+    text: 'Les boîtes sont nombreuses dans les placards de la Guilde. Profitez-en !\nDes tables sont aussi proposées pendant les permanences, les samedis après-midi.',
   },
 ]
 </script>
@@ -95,10 +97,13 @@ const activities = [
   margin-bottom: 0.6rem;
 }
 
+/* `pre-line` : les `\n` de la description passent à la ligne, le reste du
+   texte continue de se replier selon la largeur de la vignette. */
 .activity__text {
   color: var(--text-muted);
   font-size: var(--card-text-size);
   line-height: 1.4;
+  white-space: pre-line;
 }
 
 .activities__note {
