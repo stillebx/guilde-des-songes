@@ -378,8 +378,10 @@ watch(() => [route.path, route.hash], closeAll)
     display: none;
   }
 
+  /* `grid` et non `inline-flex` : c'est la grille de .social-btn qui centre
+     l'icône dans la pastille (place-items), le flex la collait à gauche. */
   .header__theme {
-    display: inline-flex;
+    display: grid;
   }
 
   /* Même gabarit que la pastille du thème, sa voisine immédiate. */

@@ -30,4 +30,13 @@ import WelcomeFog from './WelcomeFog.vue'
 .atmosphere :deep(.welcome-fog) {
   opacity: 0.26;
 }
+
+/* En mobile, l'écran ne montre qu'une poignée de volutes : à la même densité
+   elles se rejoignent en un voile uniforme, où l'on ne distingue plus le
+   mouvement. Plus légère, la brume redevient lisible comme brume. */
+@media (max-width: 760px) {
+  .atmosphere :deep(.welcome-fog) {
+    opacity: 0.15;
+  }
+}
 </style>
