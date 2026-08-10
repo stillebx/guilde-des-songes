@@ -61,8 +61,11 @@ float fbm(vec2 p) {
 }
 
 void main() {
-  // UV aspect-corrigées : le bruit reste circulaire même en 16:9.
-  vec2 uv = vUv * vec2(uResolution.x / uResolution.y, 1.0);
+  // UV normalisées par le plus petit côté : le bruit reste circulaire, et ses
+  // volutes gardent la même taille quel que soit le format. En divisant par la
+  // seule hauteur, un écran de téléphone (portrait) ne recevait pas même une
+  // volute complète dans sa largeur : la brume s'y voyait comme un aplat.
+  vec2 uv = vUv * uResolution / min(uResolution.x, uResolution.y);
 
   // Deux couches qui dérivent en sens inverses → illusion de profondeur.
   float t = uTime * SPEED;

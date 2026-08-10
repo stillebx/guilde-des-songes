@@ -106,11 +106,14 @@ watch(() => [route.path, route.hash], closeAll)
           >
             <IconGlyph :name="social.icon" />
           </component>
-          <ThemeToggle />
+          <ThemeToggle class="header__nav-theme" />
         </div>
       </nav>
 
       <div class="header__actions">
+        <!-- En mobile, le thème reste dans la barre, à gauche du menu : c'est un
+             réglage d'affichage, pas une entrée de navigation. -->
+        <ThemeToggle class="header__theme" />
         <div class="header__socials">
           <component
             :is="social.mail ? 'button' : 'a'"
@@ -278,6 +281,12 @@ watch(() => [route.path, route.hash], closeAll)
   gap: 0.6rem;
 }
 
+/* Doublon du sélecteur de thème réservé à la barre mobile : sur grand écran,
+   celui du groupe des réseaux suffit. */
+.header__theme {
+  display: none;
+}
+
 .header__burger {
   display: none;
   background: var(--bg);
@@ -352,19 +361,35 @@ watch(() => [route.path, route.hash], closeAll)
     box-shadow: none;
   }
 
-  /* En mobile, les réseaux vivent dans le menu déroulant */
+  /* En mobile, les réseaux vivent dans le menu déroulant, centrés sous les liens */
   .header__nav-socials {
     display: flex;
+    justify-content: center;
     gap: 0.9rem;
     padding-top: 0.9rem;
+  }
+
+  /* Le thème a sa pastille dans la barre : pas de doublon dans le menu. */
+  .header__nav-theme {
+    display: none;
   }
 
   .header__socials {
     display: none;
   }
 
+  .header__theme {
+    display: inline-flex;
+  }
+
+  /* Même gabarit que la pastille du thème, sa voisine immédiate. */
   .header__burger {
-    display: block;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border-radius: 50%;
   }
 }
 </style>

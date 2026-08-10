@@ -1,6 +1,9 @@
 <script setup>
 import IconGlyph from './IconGlyph.vue'
 import { socials, openContact } from '../socials.js'
+
+// Année du copyright calculée : rien à retoucher au 1er janvier.
+const annee = new Date().getFullYear()
 </script>
 
 <template>
@@ -10,14 +13,11 @@ import { socials, openContact } from '../socials.js'
         <img class="footer__logo" src="/logo-guilde.png" alt="" />
         La Guilde des Songes
       </p>
-      <!-- Groupe central : plan du site + mention, pour garder 3 blocs comme l'entête -->
+      <!-- Groupe central : mention et copyright. Pas de plan du site — la
+           navigation vit dans l'entête, présente sur toute la hauteur. -->
       <div class="footer__center">
-        <nav class="footer__links" aria-label="Plan du site">
-          <RouterLink :to="{ name: 'agenda' }">Agenda</RouterLink>
-          <RouterLink :to="{ name: 'gazette' }">Gazette</RouterLink>
-          <RouterLink :to="{ name: 'partners' }">Partenaires</RouterLink>
-        </nav>
         <p class="footer__meta">Association de jeu de rôle à Dijon</p>
+        <p class="footer__copyright">© {{ annee }} La Guilde des Songes</p>
       </div>
       <div class="footer__socials">
         <component
@@ -80,28 +80,16 @@ import { socials, openContact } from '../socials.js'
   gap: 0.3rem;
 }
 
-.footer__links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1.25rem;
-}
-
-.footer__links a {
-  color: var(--text-muted);
-  font-weight: 600;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.footer__links a:hover {
-  color: var(--accent);
-}
-
 .footer__meta {
   text-align: center;
   color: var(--text-muted);
   font-size: 0.98rem;
+}
+
+.footer__copyright {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }
 
 .footer__socials {
@@ -110,11 +98,27 @@ import { socials, openContact } from '../socials.js'
   gap: 0.6rem;
 }
 
+/* En mobile, le pied se réduit à l'essentiel — logo, mention et copyright. Les
+   réseaux sont déjà dans le menu de l'entête : empilés ici, ils faisaient
+   manger un tiers de l'écran à la bande. */
 @media (max-width: 760px) {
   .footer__inner {
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 1.25rem 0;
+    gap: 0.6rem;
+    padding: 0.9rem 0;
+    min-height: 0;
+  }
+
+  .footer__brand {
+    font-size: 1rem;
+  }
+
+  .footer__logo {
+    height: 42px;
+  }
+
+  .footer__socials {
+    display: none;
   }
 }
 </style>
