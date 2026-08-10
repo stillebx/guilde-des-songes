@@ -15,12 +15,20 @@ const PAGE_SIZE = 6
 const today = new Date().toISOString().slice(0, 10)
 
 // L'agenda vient de la feuille Google quand elle est configurée et joignable ;
-// sinon on garde les parties écrites dans events.js — jamais de page vide.
-const events = ref(localEvents)
+// sinon on retombe sur les parties écrites dans events.js — jamais de page vide.
+//
+// Rien n'est affiché avant la réponse de la feuille : afficher les parties
+// locales tout de suite les faisait apparaître puis disparaître au profit de
+// celles de la feuille, comme si l'agenda annonçait des parties fantômes.
+const events = ref([])
+const chargement = ref(true)
+const feuilleMuette = ref(false)
 
 async function chargerAgenda() {
   const depuisFeuille = await fetchAgenda()
-  if (depuisFeuille) events.value = depuisFeuille
+  feuilleMuette.value = !depuisFeuille
+  events.value = depuisFeuille || localEvents
+  chargement.value = false
 }
 
 onMounted(chargerAgenda)
@@ -386,6 +394,15 @@ function formatShortDate(iso) {
           </li>
         </ul>
       </div>
+
+      <p v-else-if="chargement" class="agenda__empty">Chargement de l'agenda…</p>
+
+      <!-- Feuille injoignable : le dire, plutôt que laisser croire qu'aucune
+           partie n'est prévue. -->
+      <p v-else-if="feuilleMuette" class="agenda__empty">
+        L'agenda n'a pas pu être chargé. Les prochaines tables sont annoncées sur le
+        Discord de la Guilde.
+      </p>
 
       <p v-else class="agenda__empty">
         Aucune partie n'est annoncée pour le moment. Les prochaines tables sont publiées
