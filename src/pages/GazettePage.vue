@@ -65,9 +65,15 @@ async function downloadIssue(issue) {
         </li>
       </ul>
 
-      <p v-else class="issues__empty">
-        Le premier numéro est en préparation. Revenez bientôt&nbsp;!
-      </p>
+      <!-- Aucun numéro déposé dans `src/gazette/` : on annonce celui qui vient. -->
+      <div v-else class="issue issue--soon">
+        <p class="issue__date">Été 2026</p>
+        <h2 class="issue__title">À paraître</h2>
+        <p class="issue__excerpt">
+          Le premier numéro de la gazette est en préparation. Il sera publié ici, et
+          annoncé sur le Discord de la Guilde.
+        </p>
+      </div>
     </div>
   </section>
 </template>
@@ -125,7 +131,12 @@ async function downloadIssue(issue) {
   text-align: justify;
 }
 
-.issues__empty {
-  color: var(--text-muted);
+/* Le numéro annoncé n'est pas cliquable : pas de halo au survol. */
+.issue--soon:hover {
+  box-shadow: var(--shadow-out);
+}
+
+.issue--soon .issue__excerpt {
+  margin: 0;
 }
 </style>
