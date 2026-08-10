@@ -5,6 +5,13 @@ import { soutiens } from '../data/soutiens.js'
 
 // Année du copyright calculée : rien à retoucher au 1er janvier.
 const annee = new Date().getFullYear()
+
+// Vite ne réécrit que les chemins écrits en dur dans le template : un `:src`
+// calculé lui échappe et resterait à la racine du domaine, alors que le site
+// vit dans un sous-dossier sur GitHub Pages. On préfixe donc à la main.
+function urlLogo(chemin) {
+  return import.meta.env.BASE_URL.replace(/\/$/, '') + chemin
+}
 </script>
 
 <template>
@@ -51,7 +58,7 @@ const annee = new Date().getFullYear()
         :target="soutien.href ? '_blank' : undefined"
         :rel="soutien.href ? 'noopener' : undefined"
       >
-        <img :src="soutien.src" :alt="soutien.alt" />
+        <img :src="urlLogo(soutien.src)" :alt="soutien.alt" />
       </component>
     </div>
   </footer>
