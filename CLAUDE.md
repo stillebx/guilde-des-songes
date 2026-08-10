@@ -6,8 +6,10 @@ réseaux) vient de l'ancien site.
 
 ## Stack
 
-- Vite + Vue 3 (`<script setup>`) + vue-router en **historique hash** (`#/agenda`) pour
-  rester 100 % statique, sans réécriture serveur.
+- Vite + Vue 3 (`<script setup>`) + vue-router en **historique HTML** : URL propres
+  (`/agenda`, pas `#/agenda`). Le site reste 100 % statique ; c'est le repli vers
+  `index.html` qui rend les liens profonds rechargeables — `public/.htaccess` (Apache,
+  OVH) et le `404.html` copié dans `dist/` au build (GitHub Pages).
 - `src/pages/` = une page par route (Home, Partners, Agenda, Gazette, GazetteIssue) ;
   `src/components/` = sections de l'accueil et briques partagées.
 - Design tokens CSS dans `src/style.css` (`--bg`, `--accent`, `--band-height`…) — jamais
@@ -45,8 +47,15 @@ met en ligne le site à **chaque push sur `main`** — y compris les modificatio
 directement depuis l'interface web de GitHub (bouton crayon puis « Commit changes »).
 Compter une à deux minutes ; l'avancement est visible dans l'onglet **Actions**.
 
-`base: './'` dans `vite.config.js` : les chemins sont relatifs, le site fonctionne donc
-aussi bien sur l'URL GitHub Pages que sur le domaine de la Guilde, sans réglage.
+Côté GitHub, **Settings → Pages → Source doit être « GitHub Actions »**. Réglé sur
+« Deploy from a branch », Pages publie les fichiers source au lieu du build : la page
+reste blanche (elle demande `/src/main.js`, que seul le serveur de dev sait servir).
+
+**Chemin de publication** : `BASE_PATH` au moment du build (`vite.config.js`), repris
+par le routeur. Le workflow le fixe à `/guilde-des-songes/`, le sous-dossier de l'URL
+GitHub Pages. Sur un domaine servi à la racine (laguildedessonges.net), mettre `/`
+dans le workflow. Les deux ne peuvent pas cohabiter : avec des URL propres, les liens
+et les fichiers doivent connaître le sous-dossier.
 
 ## Règles
 
