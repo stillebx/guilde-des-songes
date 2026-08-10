@@ -4,9 +4,9 @@
       <p class="hero__place">Association de jeu de rôle · Dijon</p>
       <h1 class="hero__title">Ta partie commence&nbsp;ici&nbsp;!</h1>
       <p class="hero__lead">
-        Débutant·e ou vétéran des dés, pour une partie solo, une soirée one-shot
-        ou une campagne au long cours&nbsp;: la Guilde des Songes vous accueille
-        autour de ses tables.
+        Débutant·e ou vétéran des dés, pour une campagne au long cours, une
+        soirée one-shot ou une partie de jeu de plateau&nbsp;: la Guilde des
+        Songes vous accueille autour de ses tables.
       </p>
       <div class="hero__actions">
         <a class="btn btn--primary" href="https://discord.gg/F8aghJ2Mpv" target="_blank" rel="noopener">

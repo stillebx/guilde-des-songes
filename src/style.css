@@ -43,7 +43,6 @@
      (campagnes au long cours) au plus clair (soirées ouvertes à tous). */
   --kind-campagne: #7c1226;
   --kind-one-shot: #b01e33;
-  --kind-solo: #9c3550;
   --kind-mensuelle: #d4586d;
   /* Hors partie (assemblée, atelier, festival…) : prune sourd, dans la même
      famille chromatique sans se confondre avec une partie. */
@@ -77,7 +76,6 @@
 
   --kind-campagne: #b8465c;
   --kind-one-shot: #e2647a;
-  --kind-solo: #cf6a86;
   --kind-mensuelle: #f090a2;
   --kind-evenement: #c9a8bd;
 }

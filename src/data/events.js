@@ -15,7 +15,6 @@ export const events = []
 export const KIND_LABELS = {
   'one-shot': 'One-shot',
   campagne: 'Campagne',
-  solo: 'Partie solo',
   mensuelle: 'Soirée mensuelle',
   evenement: 'Événement',
 }

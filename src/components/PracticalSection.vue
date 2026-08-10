@@ -38,7 +38,8 @@ import IconGlyph from './IconGlyph.vue'
             21000 Dijon
           </p>
           <p class="practical__hint">
-            Salles disponibles chaque semaine. Accueille les OS mensuelles.
+            Salles disponibles chaque semaine.<br />
+            Accueille les OS mensuelles.
           </p>
         </article>
       </div>

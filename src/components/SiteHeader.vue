@@ -227,11 +227,14 @@ watch(() => [route.path, route.hash], closeAll)
   color: var(--accent);
 }
 
+/* Aligné sur « Accueil », son déclencheur, et non centré dessous : centré, son
+   bord gauche tombait à 6 px du début du titre du hero et n'en laissait
+   dépasser qu'un bout de lettre, lu comme une tache. */
 .header__dropdown {
   position: absolute;
   top: calc(100% + 0.75rem);
-  left: 50%;
-  transform: translateX(-50%) translateY(-6px);
+  left: 0;
+  transform: translateY(-6px);
   display: grid;
   gap: 0.2rem;
   min-width: 210px;
@@ -247,7 +250,7 @@ watch(() => [route.path, route.hash], closeAll)
 .header__dropdown--open {
   opacity: 1;
   visibility: visible;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
 }
 
 .header__dropdown-link {

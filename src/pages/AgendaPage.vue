@@ -96,7 +96,7 @@ const marks = computed(() =>
 
 // Légende complète : les quatre types sont toujours annoncés, même si l'agenda
 // n'en contient aucun ce mois-ci — le code couleur reste lisible d'emblée.
-// Un type supplémentaire réellement présent (partie solo) vient s'y ajouter.
+// Un type inattendu réellement présent dans la feuille vient s'y ajouter.
 const TYPES_LEGENDE = ['campagne', 'one-shot', 'mensuelle', 'evenement']
 
 const legend = computed(() => {

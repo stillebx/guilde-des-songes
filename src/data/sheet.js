@@ -63,7 +63,7 @@ export async function postInscription({ soiree, dateSoiree, horaire, pseudo }) {
 // La feuille corrige déjà la saisie (liste déroulante, `onEdit`), mais le site
 // reste tolérant : une ligne collée en masse ou saisie avant l'installation du
 // script s'affiche quand même correctement.
-const TYPES = ['campagne', 'one-shot', 'solo', 'mensuelle', 'evenement']
+const TYPES = ['campagne', 'one-shot', 'mensuelle', 'evenement']
 
 function sansAccent(texte) {
   return String(texte || '')
@@ -78,7 +78,9 @@ function normaliserType(valeur) {
   const t = sansAccent(valeur).replace(/[\s_]+/g, '-')
   if (t.startsWith('mensuel') || t.includes('mensuelle')) return 'mensuelle'
   if (t.startsWith('campagne')) return 'campagne'
-  if (t.startsWith('solo')) return 'solo'
+  // La Guilde ne propose plus de partie solo : une ligne restée sur ce type
+  // retombe sur « one-shot » (défaut ci-dessous) plutôt que d'afficher un type
+  // que le site ne sait plus nommer ni colorer.
   if (t.startsWith('evenement') || t.startsWith('event')) return 'evenement'
   if (['one-shot', 'oneshot', 'os'].includes(t)) return 'one-shot'
   return TYPES.includes(t) ? t : 'one-shot'

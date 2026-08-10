@@ -13,7 +13,7 @@ const activities = [
   {
     icon: 'swords',
     title: 'Soirées one-shot',
-    text: 'Une histoire complète en une soirée.\nParfait pour essayer un nouveau jeu, une nouvelle table. Émotions garanties !',
+    text: 'Une histoire complète en une soirée.\nParfait pour essayer un nouveau jeu ou une nouvelle table.\nÉmotions garanties !',
   },
   {
     icon: 'pawn',
