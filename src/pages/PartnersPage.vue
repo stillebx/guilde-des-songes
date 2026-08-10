@@ -59,6 +59,32 @@ import { typo } from '../typographie.js'
   gap: 1.5rem;
 }
 
+/* Quatre partenaires : sur trois colonnes, le quatrième restait seul sur sa
+   ligne. Les tenir tous sur une seule ligne les rendrait à la fois plus
+   étroits et plus hauts (247 px de large pour 403 px de haut, mesuré) : on
+   passe donc en 2×2, vignettes larges et basses (518 × 303). */
+@media (min-width: 900px) {
+  .partners {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Vignettes larges : on resserre le vertical, l'air est déjà dans la largeur. */
+  .partners .partner {
+    padding: 1.2rem 1.6rem;
+  }
+
+  .partners .partner__icon {
+    width: 52px;
+    height: 52px;
+    margin-bottom: 0.7rem;
+  }
+
+  .partners .partner__foot {
+    min-height: 38px;
+    margin-top: 0.5rem;
+  }
+}
+
 /* Entête (icône, nom, adresse) calé en haut, description centrée dans l'espace
    restant : les cartes gardent la même hauteur et se lisent en ligne. */
 .partner {

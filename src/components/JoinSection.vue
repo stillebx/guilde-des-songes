@@ -28,7 +28,7 @@ const memberships = [
         Vous pouvez participer gratuitement aux soirées one-shot mensuelles de la Guilde.
         Pour une meilleure immersion rôlistique, la Guilde vous propose une adhésion
         annuelle afin de profiter de tous les événements et de l'accès aux locaux. Il est
-        possible de venir découvrir La Guilde et ses membres avant de vous engager,
+        possible de venir découvrir la Guilde et ses membres avant de vous engager,
         trois séances de campagne sont proposées gratuitement&nbsp;! Les
         inscriptions et adhésions se font dans
         <RouterLink :to="{ name: 'agenda' }">l'agenda</RouterLink> ou sur notre
