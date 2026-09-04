@@ -932,6 +932,77 @@ function reporterInteresses(registre, date, titre, pseudos) {
   })
 }
 
+/**
+ * Contrôle de l'installation Discord, à lancer depuis le menu « Guilde ».
+ * Affiche ce qui va et ce qui manque, plutôt que de laisser deviner pourquoi
+ * aucun pseudo ne remonte.
+ */
+function verifierDiscord() {
+  const messages = []
+  const jeton = PropertiesService.getScriptProperties().getProperty(CLE_JETON_DISCORD)
+
+  if (!jeton) {
+    messages.push(
+      `✗ Aucun jeton enregistré.\n` +
+        `  Paramètres du projet › Propriétés du script › Ajouter,\n` +
+        `  nom : ${CLE_JETON_DISCORD}`,
+    )
+    return afficher(messages)
+  }
+  messages.push('✓ Jeton enregistré.')
+
+  // Les lignes à venir qui portent un lien d'événement Discord.
+  const aujourdhui = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')
+  const cibles = []
+
+  ;[ONGLET_EVENEMENTS, ONGLET_MENSUELLES].forEach(function (nom) {
+    lignes(nom).forEach(function (l) {
+      const date = versDateIso(champ(l, 'Date'))
+      const ids = identifiantsEvenementDiscord(champ(l, 'Lien Discord'))
+      if (date && date >= aujourdhui && ids) cibles.push({ titre: texte(champ(l, 'Titre')), ids: ids })
+    })
+  })
+
+  if (!cibles.length) {
+    messages.push(
+      '✗ Aucune ligne à venir avec un lien d’événement Discord.\n' +
+        '  Collez le lien (discord.com/events/…) dans la colonne « Lien Discord ».',
+    )
+    return afficher(messages)
+  }
+  messages.push(`✓ ${cibles.length} ligne(s) à venir avec un lien d’événement.`)
+
+  // Un seul appel réel : de quoi distinguer un jeton refusé d'un bot absent.
+  const essai = cibles[0]
+  const pseudos = interessesDiscord(essai.ids, jeton)
+
+  if (pseudos === null) {
+    messages.push(
+      `✗ Discord refuse la lecture de « ${essai.titre} ».\n` +
+        '  Causes habituelles : le bot n’a pas été invité sur le serveur,\n' +
+        '  le jeton a été régénéré depuis, ou le lien ne pointe pas vers un\n' +
+        '  événement de ce serveur.',
+    )
+    return afficher(messages)
+  }
+
+  messages.push(`✓ Lecture réussie : ${pseudos.length} intéressé·e(s) sur « ${essai.titre} ».`)
+  messages.push('\nTout est en place. La relève tourne toutes les 15 minutes.')
+  return afficher(messages)
+}
+
+/** Affiche un compte rendu, dans la feuille ou dans le journal d'exécution. */
+function afficher(messages) {
+  const texte = messages.join('\n')
+  try {
+    SpreadsheetApp.getUi().alert('Vérification Discord', texte, SpreadsheetApp.getUi().ButtonSet.OK)
+  } catch (erreur) {
+    // Lancée depuis l'éditeur, sans feuille ouverte : le journal fera l'affaire.
+    Logger.log(texte)
+  }
+  return texte
+}
+
 /** Programme la relève des événements Discord, sans doublonner le déclencheur. */
 function installerSynchroDiscord() {
   ScriptApp.getProjectTriggers().forEach(function (declencheur) {
@@ -956,6 +1027,7 @@ function onOpen() {
     .createMenu('Guilde')
     .addItem('Ranger : archives et inscriptions', 'archiver')
     .addItem('Relever les inscrits Discord', 'synchroniserDiscord')
+    .addItem('Vérifier le lien avec Discord', 'verifierDiscord')
     .addToUi()
 }
 
