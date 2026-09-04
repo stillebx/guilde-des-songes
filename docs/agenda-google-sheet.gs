@@ -10,7 +10,8 @@
  * • « Inscriptions OS » : inscriptions aux soirées mensuelles.
  * • « Inscriptions événements » : inscriptions aux lignes de l'onglet
  *                         « Événements ».
- * • « Archives »        : inscriptions des dates passées, rangées par bloc.
+ * • « Archives »        : trace des dates passées — l'événement ou la soirée,
+ *                         groupé par type puis par date. Pas les inscriptions.
  *
  * OUVRIR (ET FERMER) LES INSCRIPTIONS
  * -----------------------------------
@@ -24,6 +25,22 @@
  *                pour une table remplie hors du site (sur place, au Discord).
  * La liste propose « Complet » et les quotas courants (2 à 12) ; n'importe quel
  * autre nombre reste accepté, Google se contente d'un avertissement.
+ *
+ * CE QUI SE RANGE TOUT SEUL
+ * -------------------------
+ * • Colonne « Statut » (K) de l'onglet « Événements » : « à venir » ou
+ *   « terminé », calculé depuis la date. C'est une formule : elle se recalcule
+ *   à l'ouverture du classeur, et ne part jamais sur le site.
+ * • Chaque nuit (et par le menu « Guilde › Ranger »), le script :
+ *   – reconstruit « Archives » à partir des lignes terminées des deux onglets
+ *     d'agenda, groupées par type puis par date, chaque catégorie annoncée par
+ *     un bandeau gris à cellules fusionnées ;
+ *   – regroupe chaque registre d'inscriptions par soirée, dans l'ordre
+ *     d'arrivée (premier arrivé, premier servi), avec le même bandeau entre
+ *     deux soirées, et renumérote les rangs.
+ * Rien n'est déplacé ni supprimé : les parties passées restent dans leur onglet
+ * (le calendrier du site les affiche en pastilles grisées) et les inscriptions
+ * restent dans leur registre — « Archives » n'en garde que le nombre.
  *
  * SAISIE À PLUSIEURS
  * ------------------
@@ -49,6 +66,14 @@
  * Après toute modification de ce script : Déployer › Gérer les déploiements ›
  * Modifier › Nouvelle version. (`initialiser` et `onEdit` sont actifs dès
  * l'enregistrement, sans redéploiement.)
+ *
+ * VENANT D'UNE VERSION PRÉCÉDENTE
+ * -------------------------------
+ * L'ancien script déplaçait les inscriptions passées dans « Archives ». Le
+ * nouvel onglet ne contient plus que les parties, et il est reconstruit à
+ * chaque passage. `initialiser` met donc l'ancien de côté sous le nom
+ * « Archives (inscriptions, AAAA-MM-JJ) » : rien n'est perdu, et vous pouvez le
+ * supprimer une fois vérifié.
  */
 
 const ONGLET_EVENEMENTS = 'Événements'
@@ -72,6 +97,14 @@ const COULEURS = {
 // Colonne « Places ». La liste déroulante propose « Complet » et les quotas
 // courants, mais la validation accepte n'importe quel autre nombre : la liste
 // rend le geste rapide, elle ne l'enferme pas.
+// Gris des bandeaux de séparation et des lignes déjà passées.
+const GRIS_FOND = '#e7e2e2'
+const GRIS_TRAIT = '#6b5b5e'
+
+// Colonne « Statut » de l'onglet « Événements » : calculée, jamais publiée.
+const STATUT_TERMINE = 'terminé'
+const STATUT_A_VENIR = 'à venir'
+
 const PLACES_COMPLET = 'Complet'
 // Des chaînes, jamais des nombres : `requireValueInList` attend un tableau de
 // chaînes. Le site lit indifféremment « 6 » et 6.
@@ -93,6 +126,14 @@ const COLONNES_EVENEMENTS = [
   { nom: 'Description', largeur: 380, aide: 'Deux ou trois phrases, affichées quand on ouvre la ligne sur le site.' },
   { nom: 'Places', largeur: 90, aide: AIDE_PLACES },
   { nom: 'Lien Discord', largeur: 240, aide: 'Salon de la partie : le bouton « S’inscrire » du site y renvoie. Utilisé seulement si « Places » est vide.' },
+  {
+    nom: 'Statut',
+    largeur: 90,
+    aide:
+      'Calculé tout seul à partir de la date : « à venir » ou « terminé ». ' +
+      'Colonne de travail, jamais publiée sur le site. Ne rien y écrire : la ' +
+      'formule serait perdue (relancez « initialiser » pour la remettre).',
+  },
 ]
 
 const COLONNES_MENSUELLES = [
@@ -104,6 +145,25 @@ const COLONNES_MENSUELLES = [
   { nom: 'MJ', largeur: 140, aide: 'Peut rester vide.' },
   { nom: 'Description', largeur: 380, aide: 'Présentation de la soirée sur le site.' },
   { nom: 'Places', largeur: 90, aide: AIDE_PLACES },
+]
+
+// L'onglet « Archives » garde la trace des dates passées : l'événement ou la
+// soirée, jamais le détail des inscriptions — celui-ci reste dans son registre.
+const COLONNES_ARCHIVES = [
+  { nom: 'Type', largeur: 130, aide: 'Campagne, one-shot, événement ou soirée mensuelle.' },
+  { nom: 'Date', largeur: 110, aide: 'Date à laquelle la partie a eu lieu.' },
+  { nom: 'Horaire', largeur: 130, aide: 'Horaire annoncé.' },
+  { nom: 'Titre', largeur: 240, aide: 'Titre de la ligne d’agenda.' },
+  { nom: 'Jeu', largeur: 170, aide: 'Jeu ou univers.' },
+  { nom: 'Lieu', largeur: 170, aide: 'Lieu de la partie.' },
+  { nom: 'MJ', largeur: 140, aide: 'Meneur·se de jeu.' },
+  { nom: 'Places', largeur: 90, aide: 'Ce qui figurait dans la colonne « Places ».' },
+  {
+    nom: 'Inscrit·es',
+    largeur: 90,
+    aide: 'Nombre d’inscriptions enregistrées. Le détail reste dans l’onglet « Inscriptions » correspondant.',
+  },
+  { nom: 'Description', largeur: 380, aide: 'Description telle qu’elle a été publiée.' },
 ]
 
 const COLONNES_INSCRIPTIONS = [
@@ -127,13 +187,14 @@ function initialiser() {
   const mensuelles = onglet(classeur, ONGLET_MENSUELLES, COLONNES_MENSUELLES)
   const inscriptionsOS = onglet(classeur, ONGLET_INSCRIPTIONS_OS, COLONNES_INSCRIPTIONS)
   const inscriptionsEv = onglet(classeur, ONGLET_INSCRIPTIONS_EVENEMENTS, COLONNES_INSCRIPTIONS)
-  const archives = onglet(classeur, ONGLET_ARCHIVES, COLONNES_INSCRIPTIONS)
+  mettreDeCoteAnciennesArchives(classeur)
+  const archives = onglet(classeur, ONGLET_ARCHIVES, COLONNES_ARCHIVES)
 
   reglerEvenements(evenements)
   reglerMensuelles(mensuelles)
   colonneDate(inscriptionsOS, 3)
   colonneDate(inscriptionsEv, 3)
-  colonneDate(archives, 3)
+  colonneDate(archives, 2)
 
   installerArchivageQuotidien()
 
@@ -147,6 +208,7 @@ function initialiser() {
       'Espace Baudelaire',
       '',
       "Une histoire complète en une soirée dans le Vieux Monde. Aucune connaissance de l'univers requise.",
+      '',
       '',
       '',
     ])
@@ -164,6 +226,23 @@ function initialiser() {
       12,
     ])
   }
+}
+
+/**
+ * L'ancien script déplaçait les inscriptions passées dans « Archives ». Le
+ * nouvel onglet, lui, est reconstruit à chaque passage : il écraserait ces
+ * lignes, qui ne se trouvent alors plus nulle part. On renomme donc l'ancien
+ * onglet au lieu de le vider — rien n'est perdu, et la feuille repart propre.
+ */
+function mettreDeCoteAnciennesArchives(classeur) {
+  const feuille = classeur.getSheetByName(ONGLET_ARCHIVES)
+  if (!feuille || feuille.getLastRow() < 2) return
+
+  const premiere = texte(feuille.getRange(1, 1, 1, 1).getValues()[0][0])
+  if (cleEntete(premiere) !== cleEntete(COLONNES_INSCRIPTIONS[0].nom)) return
+
+  const horodatage = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')
+  feuille.setName(`Archives (inscriptions, ${horodatage})`)
 }
 
 function onglet(classeur, nom, colonnes) {
@@ -212,6 +291,26 @@ function colonnePlaces(feuille, colonne, lignes) {
     .setHorizontalAlignment('left')
 }
 
+/**
+ * Colonne « Statut » : « à venir » ou « terminé », selon la date de la ligne.
+ * C'est une formule, pas une valeur écrite par le script : elle se recalcule
+ * toute seule à chaque ouverture du classeur, sans attendre l'archivage de la
+ * nuit. Une ligne sans date reste vide plutôt que d'annoncer « terminé ».
+ *
+ * La formule s'écrit en anglais quelle que soit la langue du classeur : Google
+ * l'affiche traduite (`IF` → `SI`, `TODAY` → `AUJOURDHUI`).
+ */
+function colonneStatut(feuille, colonne, lignes) {
+  // RC1 = la colonne A de la même ligne : une seule formule pour toute la
+  // colonne, que Google recale ligne par ligne.
+  const formule = `=IF(RC1="","",IF(RC1<TODAY(),"${STATUT_TERMINE}","${STATUT_A_VENIR}"))`
+
+  feuille
+    .getRange(2, colonne, lignes, 1)
+    .setFormulaR1C1(formule)
+    .setHorizontalAlignment('left')
+}
+
 function reglerEvenements(feuille) {
   const lignes = nbLignes(feuille)
   colonneDate(feuille, 1)
@@ -227,6 +326,7 @@ function reglerEvenements(feuille) {
     )
 
   colonnePlaces(feuille, 9, lignes)
+  colonneStatut(feuille, 11, lignes)
 
   feuille.getRange(2, 8, lignes, 1).setWrap(true)
 
@@ -240,6 +340,20 @@ function reglerEvenements(feuille) {
       .setRanges([zone])
       .build(),
   )
+
+  // Une ligne passée s'efface visuellement : elle reste lisible, mais ne tire
+  // plus l'œil au milieu des dates à venir. Règle posée après celles des types,
+  // donc prioritaire sur la couleur de fond.
+  regles.unshift(
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied(`=$K2="${STATUT_TERMINE}"`)
+      .setBackground(GRIS_FOND)
+      .setFontColor(GRIS_TRAIT)
+      .setItalic(true)
+      .setRanges([zone])
+      .build(),
+  )
+
   feuille.setConditionalFormatRules(regles)
 }
 
@@ -268,82 +382,232 @@ function reglerMensuelles(feuille) {
 /* ------------------------------------------------------------------ */
 
 /**
- * Déplace vers l'onglet « Archives » les inscriptions dont la date est passée,
- * regroupées par soirée et séparées par un bandeau : l'onglet « Inscriptions »
- * ne contient donc que les soirées à venir.
+ * Remet à jour ce qui découle des dates passées. Rien n'est déplacé ni
+ * supprimé : les deux onglets d'agenda gardent leur historique (le calendrier
+ * du site y puise ses pastilles grisées), et les inscriptions restent dans leur
+ * registre. Le travail consiste à ranger.
  *
- * Les soirées elles-mêmes restent dans « OS mensuelles » et « Événements » :
- * le calendrier du site garde ainsi son historique, en pastilles grisées.
+ * 1. « Archives » est reconstruit de zéro à partir des lignes terminées des
+ *    onglets « Événements » et « OS mensuelles », regroupées par type puis par
+ *    date. Reconstruire plutôt qu'ajouter évite tout doublon : relancer
+ *    l'archivage deux fois de suite donne exactement le même onglet.
+ * 2. Chaque registre d'inscriptions est regroupé par soirée, dans l'ordre
+ *    d'arrivée des inscriptions.
+ *
+ * Tourne chaque nuit, et à la demande par le menu « Guilde ».
  */
 function archiver() {
-  archiverRegistre(ONGLET_INSCRIPTIONS_OS, 'Soirée')
-  archiverRegistre(ONGLET_INSCRIPTIONS_EVENEMENTS, 'Événement')
+  reconstruireArchives()
+  regrouperRegistre(ONGLET_INSCRIPTIONS_OS)
+  regrouperRegistre(ONGLET_INSCRIPTIONS_EVENEMENTS)
 }
 
-function archiverRegistre(registre, intitulePrefixe) {
-  const classeur = SpreadsheetApp.getActiveSpreadsheet()
-  const source = classeur.getSheetByName(registre)
-  if (!source || source.getLastRow() < 2) return
+// Ordre des catégories dans « Archives », et intitulé de leur bandeau.
+const CATEGORIES_ARCHIVES = [
+  { type: 'campagne', titre: 'Campagnes' },
+  { type: 'one-shot', titre: 'Soirées one-shot' },
+  { type: 'événement', titre: 'Événements' },
+  { type: 'mensuelle', titre: 'Soirées mensuelles' },
+]
 
-  const archives = onglet(classeur, ONGLET_ARCHIVES, COLONNES_INSCRIPTIONS)
+/**
+ * Reconstruit l'onglet « Archives » : une ligne par date passée, groupée par
+ * catégorie. Le détail des inscriptions n'y figure pas — seulement leur
+ * nombre ; les noms restent dans l'onglet « Inscriptions » correspondant.
+ */
+function reconstruireArchives() {
+  const classeur = SpreadsheetApp.getActiveSpreadsheet()
+  const archives = onglet(classeur, ONGLET_ARCHIVES, COLONNES_ARCHIVES)
   const aujourdhui = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')
 
-  const valeurs = source.getDataRange().getValues()
-  const entetes = valeurs[0]
-  const colonneDateSoiree = entetes.indexOf('Date')
-  if (colonneDateSoiree === -1) return
+  const inscriptionsEv = lignes(ONGLET_INSCRIPTIONS_EVENEMENTS)
+  const inscriptionsOS = lignes(ONGLET_INSCRIPTIONS_OS)
 
-  // Regroupe les lignes passées par date de soirée, en gardant l'ordre.
-  const passees = {}
-  const aGarder = []
+  const passees = []
 
-  valeurs.slice(1).forEach(function (ligne) {
-    const date = versDateIso(ligne[colonneDateSoiree])
-    const estFinDeSoiree = String(ligne[0]).indexOf('—') === 0
+  lignes(ONGLET_EVENEMENTS).forEach(function (l) {
+    const date = versDateIso(champ(l, 'Date'))
+    const titre = texte(champ(l, 'Titre'))
+    if (!date || !titre || !estTerminee(l, date, aujourdhui)) return
 
-    if (date && date < aujourdhui) {
-      if (!passees[date]) passees[date] = []
-      if (!estFinDeSoiree) passees[date].push(ligne)
-    } else {
-      aGarder.push(ligne)
-    }
-  })
-
-  const dates = Object.keys(passees).sort()
-  if (!dates.length) return
-
-  dates.forEach(function (date) {
-    const inscrits = passees[date]
-    const intitule = inscrits.length ? String(inscrits[0][3] || '') : ''
-
-    // Bandeau de séparation entre deux soirées archivées.
-    archives.appendRow([
-      `— ${intitulePrefixe} du ${date}`,
-      intitule,
+    passees.push([
+      normaliserType(champ(l, 'Type') || ''),
       date,
-      intitule,
-      `${inscrits.length} inscrit·e${inscrits.length > 1 ? 's' : ''}`,
-      '',
+      normaliserHoraire(champ(l, 'Horaire') || ''),
+      titre,
+      texte(champ(l, 'Jeu')),
+      texte(champ(l, 'Lieu')),
+      texte(champ(l, 'MJ')),
+      texte(champ(l, 'Places')),
+      compterInscrits(inscriptionsEv, date, titre),
+      texte(champ(l, 'Description')),
     ])
-    archives
-      .getRange(archives.getLastRow(), 1, 1, COLONNES_INSCRIPTIONS.length)
-      .setBackground(COULEURS.mensuelle.trait)
-      .setFontColor('#ffffff')
-      .setFontWeight('bold')
-
-    inscrits.forEach(function (ligne) {
-      archives.appendRow(ligne)
-    })
-
-    archives.appendRow(['', '', '', '', '', ''])
   })
 
-  // Réécrit l'onglet des inscriptions avec les seules soirées à venir.
-  source.getRange(2, 1, source.getMaxRows() - 1, COLONNES_INSCRIPTIONS.length).clearContent().clearFormat()
-  if (aGarder.length) {
-    source.getRange(2, 1, aGarder.length, COLONNES_INSCRIPTIONS.length).setValues(aGarder)
-  }
-  colonneDate(source, 3)
+  lignes(ONGLET_MENSUELLES).forEach(function (l) {
+    const date = versDateIso(champ(l, 'Date'))
+    const titre = texte(champ(l, 'Titre'))
+    if (!date || !titre || date >= aujourdhui) return
+
+    passees.push([
+      'mensuelle',
+      date,
+      normaliserHoraire(champ(l, 'Horaire') || ''),
+      titre,
+      texte(champ(l, 'Jeux')),
+      texte(champ(l, 'Lieu')),
+      texte(champ(l, 'MJ')),
+      texte(champ(l, 'Places')),
+      compterInscrits(inscriptionsOS, date, titre),
+      texte(champ(l, 'Description')),
+    ])
+  })
+
+  viderSous(archives, COLONNES_ARCHIVES.length)
+
+  CATEGORIES_ARCHIVES.forEach(function (categorie) {
+    // Plus récent en premier : on cherche presque toujours la dernière fois.
+    const bloc = passees
+      .filter((ligne) => ligne[0] === categorie.type)
+      .sort((a, b) => (a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0))
+
+    if (!bloc.length) return
+
+    bandeau(archives, `${categorie.titre} — ${bloc.length}`, COLONNES_ARCHIVES.length)
+    garantirLignes(archives, archives.getLastRow() + bloc.length)
+    archives.getRange(archives.getLastRow() + 1, 1, bloc.length, COLONNES_ARCHIVES.length).setValues(bloc)
+  })
+
+  colonneDate(archives, 2)
+  archives.getRange(2, 10, nbLignes(archives), 1).setWrap(true)
+}
+
+/**
+ * Range un registre d'inscriptions : un bloc par soirée (même date, même
+ * intitulé), les blocs du plus ancien au plus récent, et à l'intérieur les
+ * inscriptions dans leur ordre d'arrivée — premier arrivé, premier servi.
+ * Le rang est renuméroté pour coller à cet ordre.
+ *
+ * Les bandeaux d'une exécution précédente sont relus comme tels et refaits :
+ * la fonction peut tourner autant de fois qu'on veut.
+ */
+function regrouperRegistre(nomOnglet) {
+  const classeur = SpreadsheetApp.getActiveSpreadsheet()
+  const feuille = classeur.getSheetByName(nomOnglet)
+  if (!feuille || feuille.getLastRow() < 2) return
+
+  const inscriptions = lignes(nomOnglet).filter(function (i) {
+    if (estBandeau(champ(i, "Date de l'inscription"))) return false
+    return versDateIso(champ(i, 'Date')) || texte(champ(i, 'Pseudo Discord'))
+  })
+
+  if (!inscriptions.length) return
+
+  // Une soirée = une date + un intitulé. Les deux registres peuvent contenir
+  // deux lignes le même jour : l'intitulé les distingue.
+  const blocs = {}
+  const ordre = []
+
+  inscriptions.forEach(function (i) {
+    const date = versDateIso(champ(i, 'Date'))
+    const intitule = texte(champ(i, 'Intitulé'))
+    const cle = `${date}\u0000${intitule.toLowerCase()}`
+
+    if (!blocs[cle]) {
+      blocs[cle] = { date: date, intitule: intitule, lignes: [] }
+      ordre.push(cle)
+    }
+    blocs[cle].lignes.push(i)
+  })
+
+  ordre.sort(function (a, b) {
+    return blocs[a].date < blocs[b].date ? -1 : blocs[a].date > blocs[b].date ? 1 : 0
+  })
+
+  viderSous(feuille, COLONNES_INSCRIPTIONS.length)
+
+  ordre.forEach(function (cle) {
+    const bloc = blocs[cle]
+    const rangees = bloc.lignes
+      .slice()
+      .sort((a, b) => (horodatage(a) < horodatage(b) ? -1 : horodatage(a) > horodatage(b) ? 1 : 0))
+      .map((i, index) => [
+        texte(champ(i, "Date de l'inscription")),
+        texte(champ(i, "Heure de l'inscription")),
+        bloc.date,
+        bloc.intitule,
+        texte(champ(i, 'Pseudo Discord')),
+        index + 1,
+      ])
+
+    const nom = bloc.intitule || 'Sans intitulé'
+    bandeau(
+      feuille,
+      `${nom} — ${bloc.date} — ${rangees.length} inscrit·e${rangees.length > 1 ? 's' : ''}`,
+      COLONNES_INSCRIPTIONS.length,
+    )
+    garantirLignes(feuille, feuille.getLastRow() + rangees.length)
+    feuille.getRange(feuille.getLastRow() + 1, 1, rangees.length, COLONNES_INSCRIPTIONS.length).setValues(rangees)
+  })
+
+  colonneDate(feuille, 3)
+}
+
+/** Date + heure d'inscription, en une clé triable. Une ligne saisie à la main
+ *  sans horodatage passe en fin de bloc plutôt qu'en tête. */
+function horodatage(inscription) {
+  const jour = versDateIso(champ(inscription, "Date de l'inscription")) || '9999-12-31'
+  const heure = texte(champ(inscription, "Heure de l'inscription")) || '99:99:99'
+  return `${jour} ${heure}`
+}
+
+/** Ligne de séparation : cellules fusionnées, fond gris, texte en gras. */
+function bandeau(feuille, intitule, nbColonnes) {
+  feuille.appendRow([intitule])
+
+  feuille
+    .getRange(feuille.getLastRow(), 1, 1, nbColonnes)
+    .merge()
+    .setBackground(GRIS_FOND)
+    .setFontColor(GRIS_TRAIT)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('left')
+}
+
+/**
+ * Reconnaît une ligne de séparation — bandeau d'un passage précédent, ou
+ * ancienne ligne « — complet — ». Le tiret cadratin ne se tape pas par accident
+ * dans une colonne de date ou de pseudo : il suffit à les distinguer.
+ */
+function estBandeau(valeur) {
+  return texte(valeur).indexOf('—') !== -1
+}
+
+/** Ajoute des lignes à la feuille si le bloc à écrire dépasse sa hauteur. */
+function garantirLignes(feuille, jusqua) {
+  const manquantes = jusqua - feuille.getMaxRows()
+  if (manquantes > 0) feuille.insertRowsAfter(feuille.getMaxRows(), manquantes)
+}
+
+/** Vide tout ce qui suit l'en-tête, fusions comprises. */
+function viderSous(feuille, nbColonnes) {
+  const hauteur = feuille.getMaxRows() - 1
+  if (hauteur < 1) return
+
+  const zone = feuille.getRange(2, 1, hauteur, nbColonnes)
+  zone.breakApart()
+  zone.clearContent().clearFormat()
+}
+
+/**
+ * Ligne d'agenda déjà passée ? On lit d'abord la colonne « Statut », remplie
+ * par formule ; si elle manque (feuille ancienne, colonne effacée), la date
+ * tranche seule.
+ */
+function estTerminee(ligne, date, aujourdhui) {
+  const statut = simplifier(champ(ligne, 'Statut'))
+  if (statut) return statut === simplifier(STATUT_TERMINE)
+  return date < aujourdhui
 }
 
 /** Programme l'archivage chaque nuit, sans doublonner le déclencheur. */
@@ -358,7 +622,7 @@ function installerArchivageQuotidien() {
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Guilde')
-    .addItem('Archiver les soirées passées', 'archiver')
+    .addItem('Ranger : archives et inscriptions', 'archiver')
     .addToUi()
 }
 
@@ -536,8 +800,8 @@ function texte(valeur) {
  */
 function compterInscrits(inscriptions, date, titre) {
   return inscriptions.filter(function (i) {
-    // Les lignes de fin de soirée ne sont pas des inscriptions.
-    if (texte(champ(i, "Date de l'inscription")).indexOf('—') === 0) return false
+    // Les bandeaux de séparation ne sont pas des inscriptions.
+    if (estBandeau(champ(i, "Date de l'inscription"))) return false
     if (versDateIso(champ(i, 'Date')) !== date) return false
     const intitule = texte(champ(i, 'Intitulé'))
     return !intitule || intitule.toLowerCase() === String(titre).toLowerCase()
@@ -619,7 +883,7 @@ function doPost(e) {
 
     // La ligne concernée est cherchée d'abord parmi les soirées mensuelles,
     // puis parmi les événements : chacune a son propre registre d'inscriptions.
-    const titre = texte(donnees.soiree)
+    let titre = texte(donnees.soiree)
 
     let source = lignes(ONGLET_MENSUELLES).find((l) => versDateIso(champ(l, 'Date')) === dateSoiree)
     let registre = ONGLET_INSCRIPTIONS_OS
@@ -634,6 +898,10 @@ function doPost(e) {
     }
 
     if (!source) return reponse({ ok: false, erreur: 'aucune ligne à cette date' })
+
+    // C'est l'intitulé qui regroupe les inscriptions dans le registre : si le
+    // site ne l'a pas transmis, on le reprend de la ligne d'agenda trouvée.
+    if (!titre) titre = texte(champ(source, 'Titre'))
 
     const quota = placesDe(champ(source, 'Places'))
 
@@ -667,13 +935,6 @@ function doPost(e) {
       rang,
     ])
 
-    // Quota atteint : on referme le bloc par une ligne de fin. Les inscriptions
-    // de la soirée suivante repartent donc visuellement d'un rang 1 (le rang est
-    // de toute façon calculé par soirée, jamais en continu sur l'année).
-    if (rang >= places) {
-      ligneDeFin(registre, dateSoiree, titre, places)
-    }
-
     return reponse({
       ok: true,
       rang: rang,
@@ -684,25 +945,6 @@ function doPost(e) {
   } finally {
     verrou.releaseLock()
   }
-}
-
-/** Barre de séparation en fin de soirée, quand toutes les places sont prises. */
-function ligneDeFin(registre, date, intitule, places) {
-  const feuille = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(registre)
-  feuille.appendRow([
-    '— complet —',
-    '',
-    date,
-    intitule,
-    `${places} / ${places} places`,
-    '',
-  ])
-
-  feuille
-    .getRange(feuille.getLastRow(), 1, 1, COLONNES_INSCRIPTIONS.length)
-    .setBackground(COULEURS.mensuelle.trait)
-    .setFontColor('#ffffff')
-    .setFontWeight('bold')
 }
 
 function reponse(objet) {
