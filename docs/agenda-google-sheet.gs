@@ -261,8 +261,14 @@ function onglet(classeur, nom, colonnes) {
   return feuille
 }
 
+/**
+ * Nombre de lignes réglables sous l'en-tête. Jamais plus que ce que la feuille
+ * contient : une plage plus grande est refusée par Google (« coordonnées ou
+ * dimensions non valides »).
+ */
 function nbLignes(feuille) {
-  return Math.max(feuille.getMaxRows() - 1, 500)
+  garantirLignes(feuille, 501)
+  return feuille.getMaxRows() - 1
 }
 
 function colonneDate(feuille, colonne) {
@@ -301,14 +307,24 @@ function colonnePlaces(feuille, colonne, lignes) {
  * l'affiche traduite (`IF` → `SI`, `TODAY` → `AUJOURDHUI`).
  */
 function colonneStatut(feuille, colonne, lignes) {
-  // RC1 = la colonne A de la même ligne : une seule formule pour toute la
-  // colonne, que Google recale ligne par ligne.
-  const formule = `=IF(RC1="","",IF(RC1<TODAY(),"${STATUT_TERMINE}","${STATUT_A_VENIR}"))`
+  // Une formule par ligne, en notation A1 : la notation R1C1 n'est pas toujours
+  // retraduite par Google et laisse alors « RC1 » tel quel dans la cellule, d'où
+  // une erreur de formule.
+  //
+  // DATEVALUE encadré d'IFERROR : la colonne A contient tantôt une vraie date
+  // (saisie au calendrier), tantôt le texte « 2026-09-19 » écrit par le script.
+  // Comparer directement un texte à TODAY() ne produit pas d'erreur mais un
+  // résultat faux — un texte est toujours « plus grand » qu'un nombre, donc tout
+  // serait « à venir ». On ramène donc les deux cas à un numéro de jour.
+  const formules = []
+  for (let i = 0; i < lignes; i++) {
+    const ligne = i + 2
+    formules.push([
+      `=IF($A${ligne}="","",IF(IFERROR(DATEVALUE($A${ligne}),$A${ligne})<TODAY(),"${STATUT_TERMINE}","${STATUT_A_VENIR}"))`,
+    ])
+  }
 
-  feuille
-    .getRange(2, colonne, lignes, 1)
-    .setFormulaR1C1(formule)
-    .setHorizontalAlignment('left')
+  feuille.getRange(2, colonne, lignes, 1).setFormulas(formules).setHorizontalAlignment('left')
 }
 
 function reglerEvenements(feuille) {
@@ -606,7 +622,12 @@ function viderSous(feuille, nbColonnes) {
  */
 function estTerminee(ligne, date, aujourdhui) {
   const statut = simplifier(champ(ligne, 'Statut'))
-  if (statut) return statut === simplifier(STATUT_TERMINE)
+
+  if (statut === simplifier(STATUT_TERMINE)) return true
+  if (statut === simplifier(STATUT_A_VENIR)) return false
+
+  // Colonne absente, effacée, ou cellule en erreur : la date tranche seule.
+  // Sans ce repli, une formule cassée arrêterait l'archivage sans rien dire.
   return date < aujourdhui
 }
 
