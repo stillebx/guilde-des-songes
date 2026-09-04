@@ -15,22 +15,24 @@
  *
  * OUVRIR (ET FERMER) LES INSCRIPTIONS
  * -----------------------------------
- * Tout se joue dans la colonne « Places » des deux onglets d'agenda. Elle
- * propose une liste déroulante, sans interdire d'y taper autre chose :
+ * Tout se joue dans la colonne « Places » des deux onglets d'agenda, où l'on
+ * écrit librement — pas de menu, pas de valeur refusée :
  * • vide       : ni formulaire ni compteur sur le site, aucune ligne créée.
  * • un nombre  : inscriptions ouvertes ; le site décompte les places restantes
  *                et bascule tout seul sur « Complet » au dernier inscrit.
  * • « Complet » : inscriptions fermées à la main. Le site affiche « Complet »
  *                sans compteur, et refuse toute nouvelle inscription — utile
  *                pour une table remplie hors du site (sur place, au Discord).
- * La liste propose « Complet » et les quotas courants (2 à 12) ; n'importe quel
- * autre nombre reste accepté, Google se contente d'un avertissement.
+ * La casse et les fioritures sont corrigées à la saisie : « complet », « COMPLET »
+ * et « complet !» deviennent « Complet ».
  *
  * CE QUI SE RANGE TOUT SEUL
  * -------------------------
  * • Colonne « Statut » (K) de l'onglet « Événements » : « à venir » ou
- *   « terminé », calculé depuis la date. C'est une formule : elle se recalcule
- *   à l'ouverture du classeur, et ne part jamais sur le site.
+ *   « terminé », d'après la date. Le script l'écrit lui-même — à l'ouverture du
+ *   classeur, dès qu'une date change, et chaque nuit. (Pas une formule : Google
+ *   attend « ; » ou « , » selon la langue du classeur, et affiche #ERROR! dans
+ *   l'autre cas. Une valeur ne dépend d'aucune langue.) Jamais publiée.
  * • Chaque nuit (et par le menu « Guilde › Ranger »), le script :
  *   – reconstruit « Archives » à partir des lignes terminées des deux onglets
  *     d'agenda, groupées par type puis par date, chaque catégorie annoncée par
@@ -47,7 +49,7 @@
  * • La colonne « Type » est une liste déroulante : aucune faute possible.
  * • Chaque ligne se colore automatiquement selon son type, avec les mêmes
  *   couleurs que le site : la feuille se lit d'un coup d'œil.
- * • « Date » n'accepte qu'une vraie date ; « Places » se choisit dans une liste.
+ * • « Date » n'accepte qu'une vraie date ; « Places » s'écrit librement.
  * • Chaque en-tête porte une note d'aide au survol.
  * • Tout ce qui est tapé est corrigé à la validation : « 20h » → « 20h00 »,
  *   « 10/10/2026 » → « 2026-10-10 », espaces superflus retirés (voir `onEdit`).
@@ -102,18 +104,17 @@ const GRIS_FOND = '#e7e2e2'
 const GRIS_TRAIT = '#6b5b5e'
 
 // Colonne « Statut » de l'onglet « Événements » : calculée, jamais publiée.
+const COLONNE_STATUT = 11 // K, dans l'onglet « Événements »
 const STATUT_TERMINE = 'terminé'
 const STATUT_A_VENIR = 'à venir'
 
+// Colonne « Places » : on y écrit librement un nombre ou le mot « Complet ».
 const PLACES_COMPLET = 'Complet'
-// Des chaînes, jamais des nombres : `requireValueInList` attend un tableau de
-// chaînes. Le site lit indifféremment « 6 » et 6.
-const PLACES_CHOIX = [PLACES_COMPLET, '2', '3', '4', '5', '6', '7', '8', '10', '12']
 
 const AIDE_PLACES =
-  'Vide = ni formulaire ni compteur sur le site. Un nombre = places ouvertes, ' +
-  'le site décompte ce qu\'il reste. « Complet » = inscriptions fermées, le site ' +
-  'affiche « Complet ». La liste déroulante n\'empêche pas de taper un autre nombre.'
+  'À écrire à la main. Vide = ni formulaire ni compteur sur le site. Un nombre ' +
+  'ouvre les inscriptions et le site décompte ce qu\'il reste. « Complet » les ' +
+  'ferme, et le site affiche « Complet ».'
 
 const COLONNES_EVENEMENTS = [
   { nom: 'Date', largeur: 110, aide: "Date de la partie. Tapez 10/10/2026 : la colonne l'affiche en 2026-10-10." },
@@ -130,9 +131,10 @@ const COLONNES_EVENEMENTS = [
     nom: 'Statut',
     largeur: 90,
     aide:
-      'Calculé tout seul à partir de la date : « à venir » ou « terminé ». ' +
-      'Colonne de travail, jamais publiée sur le site. Ne rien y écrire : la ' +
-      'formule serait perdue (relancez « initialiser » pour la remettre).',
+      'Rempli tout seul à partir de la date : « à venir » ou « terminé ». Se met ' +
+      'à jour à l’ouverture du classeur, dès qu’une date change, et chaque nuit. ' +
+      'Colonne de travail, jamais publiée sur le site — inutile d’y écrire, elle ' +
+      'sera réécrite.',
   },
 ]
 
@@ -161,7 +163,10 @@ const COLONNES_ARCHIVES = [
   {
     nom: 'Inscrit·es',
     largeur: 90,
-    aide: 'Nombre d’inscriptions enregistrées. Le détail reste dans l’onglet « Inscriptions » correspondant.',
+    aide:
+      'Combien de pseudos Discord se sont inscrits, et rien de plus : la liste ' +
+      'des noms resterait illisible ici. Le détail est dans l’onglet ' +
+      '« Inscriptions » correspondant, rangé par soirée.',
   },
   { nom: 'Description', largeur: 380, aide: 'Description telle qu’elle a été publiée.' },
 ]
@@ -196,6 +201,7 @@ function initialiser() {
   colonneDate(inscriptionsEv, 3)
   colonneDate(archives, 2)
 
+  rafraichirStatuts()
   installerArchivageQuotidien()
 
   if (evenements.getLastRow() < 2) {
@@ -279,52 +285,64 @@ function colonneDate(feuille, colonne) {
 }
 
 /**
- * Colonne « Places » : liste déroulante « Complet » + quotas courants, ouverte
- * à la saisie libre (`setAllowInvalid(true)`), sans quoi taper 9 ou 20 serait
- * refusé. Google affiche un simple avertissement sur une valeur hors liste ;
- * le site, lui, comprend indifféremment un nombre ou « Complet ».
+ * Colonne « Places » : cellule libre, sans liste déroulante. On y tape un
+ * nombre, ou « Complet » — rien d'autre à choisir dans un menu, rien qui
+ * refuse une valeur. `setDataValidation(null)` retire la liste posée par une
+ * version précédente du script.
+ *
+ * La saisie reste corrigée à la volée par `onEdit` : « complet », « COMPLET »
+ * ou « complet !» deviennent « Complet ».
  */
 function colonnePlaces(feuille, colonne, lignes) {
   feuille
     .getRange(2, colonne, lignes, 1)
-    .setDataValidation(
-      SpreadsheetApp.newDataValidation()
-        .requireValueInList(PLACES_CHOIX, true)
-        .setAllowInvalid(true)
-        .setHelpText(AIDE_PLACES)
-        .build(),
-    )
+    .setDataValidation(null)
     .setHorizontalAlignment('left')
 }
 
 /**
- * Colonne « Statut » : « à venir » ou « terminé », selon la date de la ligne.
- * C'est une formule, pas une valeur écrite par le script : elle se recalcule
- * toute seule à chaque ouverture du classeur, sans attendre l'archivage de la
- * nuit. Une ligne sans date reste vide plutôt que d'annoncer « terminé ».
+ * Colonne « Statut » : « à venir » ou « terminé », d'après la date de la ligne.
  *
- * La formule s'écrit en anglais quelle que soit la langue du classeur : Google
- * l'affiche traduite (`IF` → `SI`, `TODAY` → `AUJOURDHUI`).
+ * C'est le script qui écrit la valeur, et non une formule. Une formule aurait
+ * semblé plus naturelle, mais Google la refuse dès que la langue du classeur
+ * change le séparateur d'arguments (« ; » en français, « , » en anglais) : la
+ * cellule affiche alors #ERROR!. Une valeur ne dépend d'aucune langue.
+ *
+ * Elle est remise à jour à trois moments, ce qui suffit à la garder juste :
+ * à l'ouverture du classeur, à chaque changement de date (`onEdit`), et pendant
+ * le rangement de la nuit.
  */
-function colonneStatut(feuille, colonne, lignes) {
-  // Une formule par ligne, en notation A1 : la notation R1C1 n'est pas toujours
-  // retraduite par Google et laisse alors « RC1 » tel quel dans la cellule, d'où
-  // une erreur de formule.
-  //
-  // DATEVALUE encadré d'IFERROR : la colonne A contient tantôt une vraie date
-  // (saisie au calendrier), tantôt le texte « 2026-09-19 » écrit par le script.
-  // Comparer directement un texte à TODAY() ne produit pas d'erreur mais un
-  // résultat faux — un texte est toujours « plus grand » qu'un nombre, donc tout
-  // serait « à venir ». On ramène donc les deux cas à un numéro de jour.
-  const formules = []
-  for (let i = 0; i < lignes; i++) {
-    const ligne = i + 2
-    formules.push([
-      `=IF($A${ligne}="","",IF(IFERROR(DATEVALUE($A${ligne}),$A${ligne})<TODAY(),"${STATUT_TERMINE}","${STATUT_A_VENIR}"))`,
-    ])
-  }
+function rafraichirStatuts() {
+  const feuille = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ONGLET_EVENEMENTS)
+  if (!feuille || feuille.getLastRow() < 2) return
 
-  feuille.getRange(2, colonne, lignes, 1).setFormulas(formules).setHorizontalAlignment('left')
+  const hauteur = feuille.getLastRow() - 1
+  const dates = feuille.getRange(2, 1, hauteur, 1).getValues()
+  const actuels = feuille.getRange(2, COLONNE_STATUT, hauteur, 1).getValues()
+  const aujourdhui = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')
+
+  const voulus = dates.map(function (cellule) {
+    return [statutPour(cellule[0], aujourdhui)]
+  })
+
+  // On n'écrit que si quelque chose a bougé : ouvrir le classeur ne doit pas
+  // marquer le fichier comme modifié pour rien.
+  const change = voulus.some((v, i) => v[0] !== texte(actuels[i][0]))
+  if (change) feuille.getRange(2, COLONNE_STATUT, hauteur, 1).setValues(voulus)
+}
+
+/** Statut d'une date : vide si la cellule n'en contient pas. */
+function statutPour(valeurDate, aujourdhui) {
+  const iso = versDateIso(valeurDate)
+  if (!iso) return ''
+  return iso < aujourdhui ? STATUT_TERMINE : STATUT_A_VENIR
+}
+
+/** Statut d'une seule ligne, après modification de sa date. */
+function majStatutLigne(feuille, ligne) {
+  const aujourdhui = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')
+  const date = feuille.getRange(ligne, 1).getValue()
+  feuille.getRange(ligne, COLONNE_STATUT).setValue(statutPour(date, aujourdhui))
 }
 
 function reglerEvenements(feuille) {
@@ -342,7 +360,6 @@ function reglerEvenements(feuille) {
     )
 
   colonnePlaces(feuille, 9, lignes)
-  colonneStatut(feuille, 11, lignes)
 
   feuille.getRange(2, 8, lignes, 1).setWrap(true)
 
@@ -413,6 +430,7 @@ function reglerMensuelles(feuille) {
  * Tourne chaque nuit, et à la demande par le menu « Guilde ».
  */
 function archiver() {
+  rafraichirStatuts()
   reconstruireArchives()
   regrouperRegistre(ONGLET_INSCRIPTIONS_OS)
   regrouperRegistre(ONGLET_INSCRIPTIONS_EVENEMENTS)
@@ -641,6 +659,8 @@ function installerArchivageQuotidien() {
 
 /** Menu « Guilde » dans la feuille, pour archiver à la demande. */
 function onOpen() {
+  rafraichirStatuts()
+
   SpreadsheetApp.getUi()
     .createMenu('Guilde')
     .addItem('Ranger : archives et inscriptions', 'archiver')
@@ -662,7 +682,10 @@ function onEdit(e) {
   if (valeur === '' || valeur === null) return
 
   if (nom === ONGLET_EVENEMENTS) {
-    if (colonne === 1) return ecrire(e.range, versDateIso(valeur))
+    if (colonne === 1) {
+      ecrire(e.range, versDateIso(valeur))
+      return majStatutLigne(feuille, e.range.getRow())
+    }
     if (colonne === 2) return ecrire(e.range, normaliserHoraire(valeur))
     if (colonne === 3) return ecrire(e.range, normaliserType(valeur))
     if (colonne === 9) return ecrire(e.range, normaliserPlaces(valeur))
@@ -823,6 +846,8 @@ function compterInscrits(inscriptions, date, titre) {
   return inscriptions.filter(function (i) {
     // Les bandeaux de séparation ne sont pas des inscriptions.
     if (estBandeau(champ(i, "Date de l'inscription"))) return false
+    // On compte des pseudos Discord : une ligne sans pseudo ne compte pas.
+    if (!texte(champ(i, 'Pseudo Discord'))) return false
     if (versDateIso(champ(i, 'Date')) !== date) return false
     const intitule = texte(champ(i, 'Intitulé'))
     return !intitule || intitule.toLowerCase() === String(titre).toLowerCase()
