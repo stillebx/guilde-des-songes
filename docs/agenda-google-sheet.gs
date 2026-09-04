@@ -772,8 +772,10 @@ function estTerminee(ligne, date, aujourdhui) {
  * 3. Apps Script › Paramètres du projet › Propriétés du script › Ajouter :
  *    nom `DISCORD_TOKEN`, valeur le jeton. Il ne doit jamais être écrit ici.
  *
- * Le bouton « Intéressé·e » n'est pas un engagement ferme : le compte inclut
- * les curieux. C'est la limite de l'exercice, pas un défaut du script.
+ * À la Guilde, cliquer « Intéressé·e » vaut inscription : c'est la convention
+ * de l'association, et c'est ce qui rend ce décompte fiable. Ailleurs, ce
+ * bouton dit souvent la simple curiosité — un décompte fondé dessus y serait
+ * trompeur. À vérifier avant de reprendre ce script pour un autre serveur.
  */
 function synchroniserDiscord() {
   const jeton = PropertiesService.getScriptProperties().getProperty(CLE_JETON_DISCORD)
