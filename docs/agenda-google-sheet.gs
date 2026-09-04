@@ -4,7 +4,7 @@
  *
  * LES ONGLETS
  * -----------
- * • « Événements »      : parties classiques (campagne, one-shot, solo) et
+ * • « Événements »      : parties classiques (campagne, one-shot) et
  *                         événements hors partie (assemblée, atelier, festival…).
  * • « OS mensuelles »   : les soirées one-shot mensuelles.
  * • « Inscriptions OS » : inscriptions aux soirées mensuelles.
@@ -12,19 +12,25 @@
  *                         « Événements ».
  * • « Archives »        : inscriptions des dates passées, rangées par bloc.
  *
- * OUVRIR LES INSCRIPTIONS
- * -----------------------
- * Une seule règle, valable pour les deux onglets d'agenda : renseigner la
- * colonne « Places ». Le site affiche alors le formulaire et le compteur de
- * places restantes, et les inscriptions arrivent dans le registre correspondant.
- * Colonne « Places » vide : ni formulaire ni compteur, et aucune ligne créée.
+ * OUVRIR (ET FERMER) LES INSCRIPTIONS
+ * -----------------------------------
+ * Tout se joue dans la colonne « Places » des deux onglets d'agenda. Elle
+ * propose une liste déroulante, sans interdire d'y taper autre chose :
+ * • vide       : ni formulaire ni compteur sur le site, aucune ligne créée.
+ * • un nombre  : inscriptions ouvertes ; le site décompte les places restantes
+ *                et bascule tout seul sur « Complet » au dernier inscrit.
+ * • « Complet » : inscriptions fermées à la main. Le site affiche « Complet »
+ *                sans compteur, et refuse toute nouvelle inscription — utile
+ *                pour une table remplie hors du site (sur place, au Discord).
+ * La liste propose « Complet » et les quotas courants (2 à 12) ; n'importe quel
+ * autre nombre reste accepté, Google se contente d'un avertissement.
  *
  * SAISIE À PLUSIEURS
  * ------------------
  * • La colonne « Type » est une liste déroulante : aucune faute possible.
  * • Chaque ligne se colore automatiquement selon son type, avec les mêmes
  *   couleurs que le site : la feuille se lit d'un coup d'œil.
- * • « Date » et « Places » n'acceptent qu'une vraie date / un entier positif.
+ * • « Date » n'accepte qu'une vraie date ; « Places » se choisit dans une liste.
  * • Chaque en-tête porte une note d'aide au survol.
  * • Tout ce qui est tapé est corrigé à la validation : « 20h » → « 20h00 »,
  *   « 10/10/2026 » → « 2026-10-10 », espaces superflus retirés (voir `onEdit`).
@@ -53,16 +59,28 @@ const ONGLET_ARCHIVES = 'Archives'
 
 // Types de l'onglet « Événements ». Les soirées mensuelles ont leur propre
 // onglet : elles ne figurent pas dans cette liste.
-const TYPES = ['campagne', 'one-shot', 'solo', 'événement']
+const TYPES = ['campagne', 'one-shot', 'événement']
 
 // Code couleur du site : trait de la ligne, et fond très clair pour la lisibilité.
 const COULEURS = {
   campagne: { trait: '#7c1226', fond: '#f3dfe4' },
   'one-shot': { trait: '#b01e33', fond: '#f9e3e6' },
-  solo: { trait: '#9c3550', fond: '#f5e4e9' },
   'événement': { trait: '#6f5566', fond: '#eee7ec' },
   mensuelle: { trait: '#d4586d', fond: '#fce7eb' },
 }
+
+// Colonne « Places ». La liste déroulante propose « Complet » et les quotas
+// courants, mais la validation accepte n'importe quel autre nombre : la liste
+// rend le geste rapide, elle ne l'enferme pas.
+const PLACES_COMPLET = 'Complet'
+// Des chaînes, jamais des nombres : `requireValueInList` attend un tableau de
+// chaînes. Le site lit indifféremment « 6 » et 6.
+const PLACES_CHOIX = [PLACES_COMPLET, '2', '3', '4', '5', '6', '7', '8', '10', '12']
+
+const AIDE_PLACES =
+  'Vide = ni formulaire ni compteur sur le site. Un nombre = places ouvertes, ' +
+  'le site décompte ce qu\'il reste. « Complet » = inscriptions fermées, le site ' +
+  'affiche « Complet ». La liste déroulante n\'empêche pas de taper un autre nombre.'
 
 const COLONNES_EVENEMENTS = [
   { nom: 'Date', largeur: 110, aide: "Date de la partie. Tapez 10/10/2026 : la colonne l'affiche en 2026-10-10." },
@@ -73,7 +91,7 @@ const COLONNES_EVENEMENTS = [
   { nom: 'Lieu', largeur: 170, aide: 'Ex. « Espace Baudelaire ». Peut rester vide.' },
   { nom: 'MJ', largeur: 140, aide: 'Ex. « MJ : Marc ». Peut rester vide.' },
   { nom: 'Description', largeur: 380, aide: 'Deux ou trois phrases, affichées quand on ouvre la ligne sur le site.' },
-  { nom: 'Places', largeur: 80, aide: 'Nombre de places pour ouvrir les inscriptions sur le site. VIDE ou 0 = pas de formulaire ni de compteur affichés.' },
+  { nom: 'Places', largeur: 90, aide: AIDE_PLACES },
   { nom: 'Lien Discord', largeur: 240, aide: 'Salon de la partie : le bouton « S’inscrire » du site y renvoie. Utilisé seulement si « Places » est vide.' },
 ]
 
@@ -85,7 +103,7 @@ const COLONNES_MENSUELLES = [
   { nom: 'Lieu', largeur: 170, aide: 'Ex. « Espace Baudelaire ».' },
   { nom: 'MJ', largeur: 140, aide: 'Peut rester vide.' },
   { nom: 'Description', largeur: 380, aide: 'Présentation de la soirée sur le site.' },
-  { nom: 'Places', largeur: 80, aide: 'Nombre total de places. Le site affiche ce qu’il reste et bloque quand c’est complet.' },
+  { nom: 'Places', largeur: 90, aide: AIDE_PLACES },
 ]
 
 const COLONNES_INSCRIPTIONS = [
@@ -175,6 +193,25 @@ function colonneDate(feuille, colonne) {
     .setHorizontalAlignment('left')
 }
 
+/**
+ * Colonne « Places » : liste déroulante « Complet » + quotas courants, ouverte
+ * à la saisie libre (`setAllowInvalid(true)`), sans quoi taper 9 ou 20 serait
+ * refusé. Google affiche un simple avertissement sur une valeur hors liste ;
+ * le site, lui, comprend indifféremment un nombre ou « Complet ».
+ */
+function colonnePlaces(feuille, colonne, lignes) {
+  feuille
+    .getRange(2, colonne, lignes, 1)
+    .setDataValidation(
+      SpreadsheetApp.newDataValidation()
+        .requireValueInList(PLACES_CHOIX, true)
+        .setAllowInvalid(true)
+        .setHelpText(AIDE_PLACES)
+        .build(),
+    )
+    .setHorizontalAlignment('left')
+}
+
 function reglerEvenements(feuille) {
   const lignes = nbLignes(feuille)
   colonneDate(feuille, 1)
@@ -185,19 +222,11 @@ function reglerEvenements(feuille) {
       SpreadsheetApp.newDataValidation()
         .requireValueInList(TYPES, true)
         .setAllowInvalid(false)
-        .setHelpText('campagne, one-shot, solo ou événement.')
+        .setHelpText('campagne, one-shot ou événement.')
         .build(),
     )
 
-  feuille
-    .getRange(2, 9, lignes, 1)
-    .setDataValidation(
-      SpreadsheetApp.newDataValidation()
-        .requireNumberGreaterThanOrEqualTo(0)
-        .setAllowInvalid(false)
-        .setHelpText('Nombre de places (vide ou 0 = pas d’inscription par le site).')
-        .build(),
-    )
+  colonnePlaces(feuille, 9, lignes)
 
   feuille.getRange(2, 8, lignes, 1).setWrap(true)
 
@@ -218,15 +247,7 @@ function reglerMensuelles(feuille) {
   const lignes = nbLignes(feuille)
   colonneDate(feuille, 1)
 
-  feuille
-    .getRange(2, 8, lignes, 1)
-    .setDataValidation(
-      SpreadsheetApp.newDataValidation()
-        .requireNumberGreaterThanOrEqualTo(0)
-        .setAllowInvalid(false)
-        .setHelpText('Nombre de places, entier positif.')
-        .build(),
-    )
+  colonnePlaces(feuille, 8, lignes)
 
   feuille.getRange(2, 7, lignes, 1).setWrap(true)
 
@@ -359,12 +380,14 @@ function onEdit(e) {
     if (colonne === 1) return ecrire(e.range, versDateIso(valeur))
     if (colonne === 2) return ecrire(e.range, normaliserHoraire(valeur))
     if (colonne === 3) return ecrire(e.range, normaliserType(valeur))
+    if (colonne === 9) return ecrire(e.range, normaliserPlaces(valeur))
     if ([4, 5, 6, 7, 8, 10].includes(colonne)) return ecrire(e.range, String(valeur).trim())
   }
 
   if (nom === ONGLET_MENSUELLES) {
     if (colonne === 1) return ecrire(e.range, versDateIso(valeur))
     if (colonne === 2) return ecrire(e.range, normaliserHoraire(valeur))
+    if (colonne === 8) return ecrire(e.range, normaliserPlaces(valeur))
     if ([3, 4, 5, 6, 7].includes(colonne)) return ecrire(e.range, String(valeur).trim())
   }
 
@@ -387,12 +410,36 @@ function simplifier(texte) {
     .trim()
 }
 
+/**
+ * Cellule « Places » → ce que le site attend : un nombre de places, et le
+ * drapeau « complet ». Trois cas seulement :
+ *   vide (ou 0)  → { places: 0, complet: false }  : ni formulaire ni compteur
+ *   un nombre    → { places: n, complet: false }  : inscriptions ouvertes
+ *   « Complet »  → { places: 0, complet: true }   : fermées, et le site le dit
+ * « COMPLET », « complet !» sont reconnus de la même façon ; « complètement »,
+ * non — ce n'est pas le mot.
+ */
+function placesDe(valeur) {
+  // `\b` : « complet », « complet !», mais pas « complètement » ni un mot
+  // qui commencerait par ces lettres.
+  if (/^complet\b/.test(simplifier(valeur))) {
+    return { places: 0, complet: true }
+  }
+  return { places: Number(valeur) || 0, complet: false }
+}
+
+/** « complet », « COMPLET !», « Complet » → « Complet ». Le reste est inchangé. */
+function normaliserPlaces(valeur) {
+  return placesDe(valeur).complet ? PLACES_COMPLET : valeur
+}
+
 /** « One Shot », « oneshot », « OS », « evenement » → un type de la liste. */
 function normaliserType(valeur) {
   const t = simplifier(valeur).replace(/[\s_]+/g, '-')
 
   if (/^campagne/.test(t)) return 'campagne'
-  if (/^solo/.test(t)) return 'solo'
+  // La Guilde ne propose plus de partie solo : une ligne restée sur ce type
+  // retombe sur « one-shot » (défaut ci-dessous), que le site sait nommer.
   if (/^(evenement|event)/.test(t)) return 'événement'
   if (/^(one-shot|oneshot|os)$/.test(t)) return 'one-shot'
   return TYPES.indexOf(t) !== -1 ? t : 'one-shot'
@@ -508,6 +555,7 @@ function doGet() {
       .map((l) => {
         const date = versDateIso(champ(l, 'Date'))
         const titre = texte(champ(l, 'Titre'))
+        const places = placesDe(champ(l, 'Places'))
         return {
           date: date,
           horaire: normaliserHoraire(champ(l, 'Horaire') || ''),
@@ -517,7 +565,8 @@ function doGet() {
           lieu: texte(champ(l, 'Lieu')),
           mj: texte(champ(l, 'MJ')),
           description: texte(champ(l, 'Description')),
-          places: Number(champ(l, 'Places')) || 0,
+          places: places.places,
+          complet: places.complet,
           lien: texte(champ(l, 'Lien Discord')),
           inscrits: compterInscrits(inscriptionsEv, date, titre),
         }
@@ -527,6 +576,7 @@ function doGet() {
       .filter((l) => versDateIso(champ(l, 'Date')) && texte(champ(l, 'Titre')))
       .map((l) => {
         const date = versDateIso(champ(l, 'Date'))
+        const places = placesDe(champ(l, 'Places'))
         return {
           date: date,
           horaire: normaliserHoraire(champ(l, 'Horaire') || ''),
@@ -538,7 +588,8 @@ function doGet() {
           lieu: texte(champ(l, 'Lieu')),
           mj: texte(champ(l, 'MJ')),
           description: texte(champ(l, 'Description')),
-          places: Number(champ(l, 'Places')) || 0,
+          places: places.places,
+          complet: places.complet,
           lien: '',
           inscrits: compterInscrits(inscriptionsOS, date, texte(champ(l, 'Titre'))),
         }
@@ -584,7 +635,13 @@ function doPost(e) {
 
     if (!source) return reponse({ ok: false, erreur: 'aucune ligne à cette date' })
 
-    const places = Number(champ(source, 'Places')) || 0
+    const quota = placesDe(champ(source, 'Places'))
+
+    // « Complet » posé à la main dans la feuille : on refuse comme si le quota
+    // était atteint, même si le registre compte moins d'inscrits.
+    if (quota.complet) return reponse({ ok: false, complet: true, restantes: 0 })
+
+    const places = quota.places
     if (!places) return reponse({ ok: false, erreur: 'inscriptions fermées' })
 
     const inscrits = lignes(registre).filter(

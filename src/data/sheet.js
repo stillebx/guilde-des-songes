@@ -101,6 +101,12 @@ function normaliserDate(valeur) {
 // Une ligne de la feuille → la forme attendue par l'agenda du site.
 function versEvenement(ligne) {
   const places = Number(ligne.places) || 0
+  // La colonne « Places » de la feuille accepte « Complet » à la place d'un
+  // nombre : la table est fermée sans qu'on sache — ni qu'on ait à saisir — le
+  // nombre d'inscrits. Le script envoie alors `complet`; une feuille plus
+  // ancienne, ou une saisie à la main, peut aussi laisser passer le mot.
+  const complet =
+    ligne.complet === true || /^complet\b/i.test(String(ligne.places || '').trim())
 
   return {
     date: normaliserDate(ligne.date),
@@ -113,16 +119,24 @@ function versEvenement(ligne) {
     text: typo(ligne.description),
     places: places,
     inscrits: Number(ligne.inscrits) || 0,
+    complet: complet,
     // C'est le nombre de places qui ouvre les inscriptions en ligne, quel que
     // soit le type : une partie, une soirée mensuelle ou un événement hors
-    // partie peuvent tous en proposer. Sans places : ni formulaire ni compteur.
-    form: places > 0,
+    // partie peuvent tous en proposer. Sans places, ou table déclarée complète :
+    // ni formulaire ni compteur.
+    form: places > 0 && !complet,
     signup: ligne.lien || undefined,
   }
 }
 
-/** Places restantes, ou `null` quand la partie n'en déclare pas. */
+/**
+ * Places restantes, ou `null` quand la partie n'en déclare pas.
+ * Une table déclarée complète dans la feuille renvoie 0, sans quoi le site
+ * n'aurait rien à afficher : c'est ce 0 qui devient l'étiquette « Complet ».
+ */
 export function placesRestantes(event) {
-  if (!event || !event.places) return null
+  if (!event) return null
+  if (event.complet) return 0
+  if (!event.places) return null
   return Math.max(0, event.places - (event.inscrits || 0))
 }

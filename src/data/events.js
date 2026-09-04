@@ -9,6 +9,8 @@
 //   time   : horaire libre, affiché tel quel.
 //   kind   : une clé de KIND_LABELS ci-dessous — pilote couleur et libellé.
 //   places : nombre de places ; au-delà de 0, le formulaire du site s'ouvre.
+//   complet: `true` pour une table fermée sans compteur — l'équivalent du
+//            « Complet » de la colonne « Places » de la feuille.
 //   signup : lien du salon Discord de la partie, à défaut de places.
 export const events = []
 

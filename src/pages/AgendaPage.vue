@@ -259,7 +259,7 @@ function formatShortDate(iso) {
             </p>
 
             <p v-if="estComplet(item)" class="detail__closed">
-              Cette soirée affiche complet. Écrivez-nous sur le Discord pour la liste d'attente.
+              C'est complet. Écrivez-nous sur le Discord pour la liste d'attente.
             </p>
 
             <SignupForm
@@ -319,7 +319,7 @@ function formatShortDate(iso) {
             </p>
 
             <p v-if="estComplet(modalEvent)" class="detail__closed">
-              Cette soirée affiche complet. Écrivez-nous sur le Discord pour la liste d'attente.
+              C'est complet. Écrivez-nous sur le Discord pour la liste d'attente.
             </p>
 
             <SignupForm
