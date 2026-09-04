@@ -107,12 +107,14 @@ async function submit() {
       Pseudo Discord, ou prénom
     </label>
     <div class="signup__row">
+      <!-- Texte de substitution court : l'étiquette dit déjà les deux cas, et
+           un texte long se fait rogner dans le champ en mobile. -->
       <input
         :id="`pseudo-${date}`"
         v-model="pseudo"
         class="signup__input"
         type="text"
-        placeholder="votre pseudo Discord, ou votre prénom"
+        placeholder="pseudo ou prénom"
         required
       />
       <button class="btn btn--primary signup__btn" type="submit" :disabled="sending">
@@ -120,6 +122,13 @@ async function submit() {
       </button>
     </div>
     <p v-if="error" class="signup__error">{{ error }}</p>
+
+    <!-- Mention d'information : le pseudo saisi ici part dans un registre tenu
+         par l'association. Le dire au moment de la saisie, et non dans une page
+         que personne n'ouvre. -->
+    <p class="signup__mention">
+      Votre pseudo est conservé par la Guilde à des fins d'archives.
+    </p>
   </form>
 
   <p v-else class="signup__done">
@@ -194,6 +203,13 @@ async function submit() {
 .signup__error {
   color: var(--accent-strong);
   font-size: 0.95rem;
+}
+
+/* Mention discrète : elle informe sans peser sur le geste d'inscription. */
+.signup__mention {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.35;
 }
 
 .signup__done {
