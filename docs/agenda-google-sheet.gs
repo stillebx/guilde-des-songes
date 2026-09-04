@@ -251,6 +251,43 @@ function initialiser() {
 }
 
 /**
+ * Range les lignes d'un onglet d'agenda par date croissante. Les lignes sans
+ * date restent en bas : Google place les cellules vides en fin de tri.
+ */
+function trierParDate(feuille, colonneDate) {
+  if (feuille.getLastRow() < 3) return
+
+  feuille
+    .getRange(2, 1, feuille.getLastRow() - 1, feuille.getLastColumn())
+    .sort({ column: colonneDate, ascending: true })
+}
+
+/**
+ * Trie après la saisie d'une date, et ramène le curseur sur la ligne qui vient
+ * de bouger.
+ *
+ * Sans ce rattrapage, le tri serait une gêne plutôt qu'un service : Google
+ * garde le curseur sur l'adresse de la cellule, pas sur la ligne. La ligne
+ * qu'on remplit filerait à sa place chronologique et la suite de la saisie
+ * atterrirait dans la ligne d'à côté. On la retrouve donc à son contenu, et on
+ * pose le curseur sur sa case suivante — prêt à continuer.
+ */
+function classerLigne(feuille, ligne, colonneDate) {
+  const largeur = feuille.getLastColumn()
+  const empreinte = feuille.getRange(ligne, 1, 1, largeur).getValues()[0].join('\u0000')
+
+  trierParDate(feuille, colonneDate)
+
+  const donnees = feuille.getRange(2, 1, feuille.getLastRow() - 1, largeur).getValues()
+  for (let i = 0; i < donnees.length; i++) {
+    if (donnees[i].join('\u0000') === empreinte) {
+      feuille.setActiveRange(feuille.getRange(i + 2, Math.min(colonneDate + 1, largeur)))
+      return
+    }
+  }
+}
+
+/**
  * Reprise des feuilles installées avant que « Statut » ne passe en tête.
  *
  * L'en-tête serait réécrit par `onglet()` sans que les données bougent : les
@@ -473,6 +510,12 @@ function reglerMensuelles(feuille) {
  * Tourne chaque nuit, et à la demande par le menu « Guilde ».
  */
 function archiver() {
+  const classeur = SpreadsheetApp.getActiveSpreadsheet()
+  const evenements = classeur.getSheetByName(ONGLET_EVENEMENTS)
+  const mensuelles = classeur.getSheetByName(ONGLET_MENSUELLES)
+  if (evenements) trierParDate(evenements, COLONNE_DATE)
+  if (mensuelles) trierParDate(mensuelles, 1)
+
   rafraichirStatuts()
   reconstruireArchives()
   regrouperRegistre(ONGLET_INSCRIPTIONS_OS)
@@ -729,8 +772,10 @@ function onEdit(e) {
     // remplacé par la valeur qu'appelle la date, plutôt que laissé à côté.
     if (colonne === COLONNE_STATUT) return majStatutLigne(feuille, e.range.getRow())
     if (colonne === COLONNE_DATE) {
+      const ligne = e.range.getRow()
       ecrire(e.range, versDateIso(valeur))
-      return majStatutLigne(feuille, e.range.getRow())
+      majStatutLigne(feuille, ligne)
+      return classerLigne(feuille, ligne, COLONNE_DATE)
     }
     if (colonne === COLONNE_HORAIRE) return ecrire(e.range, normaliserHoraire(valeur))
     if (colonne === COLONNE_TYPE) return ecrire(e.range, normaliserType(valeur))
@@ -741,7 +786,11 @@ function onEdit(e) {
   }
 
   if (nom === ONGLET_MENSUELLES) {
-    if (colonne === 1) return ecrire(e.range, versDateIso(valeur))
+    if (colonne === 1) {
+      const ligne = e.range.getRow()
+      ecrire(e.range, versDateIso(valeur))
+      return classerLigne(feuille, ligne, 1)
+    }
     if (colonne === 2) return ecrire(e.range, normaliserHoraire(valeur))
     if (colonne === 8) return ecrire(e.range, normaliserPlaces(valeur))
     if ([3, 4, 5, 6, 7].includes(colonne)) return ecrire(e.range, String(valeur).trim())
