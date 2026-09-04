@@ -161,6 +161,15 @@ const COLONNES_MENSUELLES = [
   { nom: 'MJ', largeur: 140, aide: 'Peut rester vide.' },
   { nom: 'Description', largeur: 380, aide: 'Présentation de la soirée sur le site.' },
   { nom: 'Places', largeur: 90, aide: AIDE_PLACES },
+  {
+    nom: 'Lien Discord',
+    largeur: 240,
+    aide:
+      'Lien de l’événement Discord de la soirée, s’il y en a un. Sert seulement ' +
+      'à relever les « Intéressé·e » : leurs pseudos rejoignent le registre. Le ' +
+      'site n’en reçoit rien et garde son formulaire — la soirée mensuelle doit ' +
+      'rester ouverte à qui n’a pas de compte Discord.',
+  },
 ]
 
 // L'onglet « Archives » garde la trace des dates passées : l'événement ou la
@@ -190,7 +199,14 @@ const COLONNES_INSCRIPTIONS = [
   { nom: "Heure de l'inscription", largeur: 150, aide: 'Rempli automatiquement par le site.' },
   { nom: 'Date', largeur: 140, aide: 'Date de la partie ou de l’événement concerné. Indispensable pour inscrire quelqu’un à la main.' },
   { nom: 'Intitulé', largeur: 240, aide: 'Titre exact de la ligne concernée. À remplir si deux choses ont lieu le même jour.' },
-  { nom: 'Pseudo Discord', largeur: 180, aide: 'Pseudo de la personne inscrite.' },
+  {
+    nom: 'Pseudo',
+    largeur: 180,
+    aide:
+      'Pseudo Discord de la personne inscrite, ou son prénom : le formulaire du ' +
+      'site accepte les deux, pour ne pas obliger à créer un compte Discord. Un ' +
+      'pseudo identique à celui de Discord évite de compter la personne deux fois.',
+  },
   { nom: 'Rang', largeur: 70, aide: 'Ordre d’arrivée, calculé par le site.' },
   {
     nom: 'Origine',
@@ -635,7 +651,7 @@ function regrouperRegistre(nomOnglet) {
 
   const inscriptions = lignes(nomOnglet).filter(function (i) {
     if (estBandeau(champ(i, "Date de l'inscription"))) return false
-    return versDateIso(champ(i, 'Date')) || texte(champ(i, 'Pseudo Discord'))
+    return versDateIso(champ(i, 'Date')) || pseudoDe(i)
   })
 
   if (!inscriptions.length) return
@@ -673,7 +689,7 @@ function regrouperRegistre(nomOnglet) {
         texte(champ(i, "Heure de l'inscription")),
         bloc.date,
         bloc.intitule,
-        texte(champ(i, 'Pseudo Discord')),
+        pseudoDe(i),
         index + 1,
         texte(champ(i, 'Origine')),
       ])
@@ -783,18 +799,27 @@ function synchroniserDiscord() {
 
   const aujourdhui = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')
 
-  lignes(ONGLET_EVENEMENTS).forEach(function (l) {
-    const date = versDateIso(champ(l, 'Date'))
-    const titre = texte(champ(l, 'Titre'))
-    const ids = identifiantsEvenementDiscord(champ(l, 'Lien Discord'))
+  // Les deux agendas : une soirée mensuelle peut elle aussi avoir son événement
+  // Discord, et ses intéressés doivent figurer au registre comme les autres.
+  const agendas = [
+    { onglet: ONGLET_EVENEMENTS, registre: ONGLET_INSCRIPTIONS_EVENEMENTS },
+    { onglet: ONGLET_MENSUELLES, registre: ONGLET_INSCRIPTIONS_OS },
+  ]
 
-    // Rien à suivre sur une date passée : le registre garde son dernier état.
-    if (!date || !titre || !ids || date < aujourdhui) return
+  agendas.forEach(function (agenda) {
+    lignes(agenda.onglet).forEach(function (l) {
+      const date = versDateIso(champ(l, 'Date'))
+      const titre = texte(champ(l, 'Titre'))
+      const ids = identifiantsEvenementDiscord(champ(l, 'Lien Discord'))
 
-    const pseudos = interessesDiscord(ids, jeton)
-    if (pseudos === null) return // appel en échec : on ne touche à rien
+      // Rien à suivre sur une date passée : le registre garde son dernier état.
+      if (!date || !titre || !ids || date < aujourdhui) return
 
-    reporterInteresses(date, titre, pseudos)
+      const pseudos = interessesDiscord(ids, jeton)
+      if (pseudos === null) return // appel en échec : on ne touche à rien
+
+      reporterInteresses(agenda.registre, date, titre, pseudos)
+    })
   })
 }
 
@@ -851,16 +876,16 @@ function interessesDiscord(ids, jeton) {
  * n'est pas ajouté deux fois — c'est ce qui évite le double comptage quand
  * quelqu'un s'inscrit des deux côtés.
  */
-function reporterInteresses(date, titre, pseudos) {
+function reporterInteresses(registre, date, titre, pseudos) {
   const classeur = SpreadsheetApp.getActiveSpreadsheet()
-  const feuille = onglet(classeur, ONGLET_INSCRIPTIONS_EVENEMENTS, COLONNES_INSCRIPTIONS)
+  const feuille = onglet(classeur, registre, COLONNES_INSCRIPTIONS)
   const valeurs = feuille.getDataRange().getValues()
   const entetes = valeurs[0].map((e) => cleEntete(texte(e)))
 
   const colonne = (nom) => entetes.indexOf(cleEntete(nom))
   const iDate = colonne('Date')
   const iTitre = colonne('Intitulé')
-  const iPseudo = colonne('Pseudo Discord')
+  const iPseudo = colonne('Pseudo') !== -1 ? colonne('Pseudo') : colonne('Pseudo Discord')
   const iOrigine = colonne('Origine')
   if (iDate === -1 || iPseudo === -1 || iOrigine === -1) return
 
@@ -1106,6 +1131,15 @@ function lignes(nomOnglet) {
   })
 }
 
+/**
+ * Pseudo d'une inscription. La colonne s'appelait « Pseudo Discord » : une
+ * feuille pas encore réinitialisée porte encore ce nom, on lit donc les deux.
+ */
+function pseudoDe(ligne) {
+  const valeur = champ(ligne, 'Pseudo')
+  return texte(valeur === undefined || valeur === '' ? champ(ligne, 'Pseudo Discord') : valeur)
+}
+
 /** Valeur d'une colonne, quel que soit l'accent, la casse ou le pluriel. */
 function champ(ligne, nom) {
   const valeur = ligne[nom]
@@ -1125,7 +1159,7 @@ function compterInscrits(inscriptions, date, titre) {
     // Les bandeaux de séparation ne sont pas des inscriptions.
     if (estBandeau(champ(i, "Date de l'inscription"))) return false
     // On compte des pseudos Discord : une ligne sans pseudo ne compte pas.
-    if (!texte(champ(i, 'Pseudo Discord'))) return false
+    if (!pseudoDe(i)) return false
     if (versDateIso(champ(i, 'Date')) !== date) return false
     const intitule = texte(champ(i, 'Intitulé'))
     return !intitule || intitule.toLowerCase() === String(titre).toLowerCase()
@@ -1178,6 +1212,10 @@ function doGet() {
           description: texte(champ(l, 'Description')),
           places: places.places,
           complet: places.complet,
+          // Le lien Discord d'une soirée mensuelle sert à relever les
+          // intéressés, pas à détourner l'inscription : le site n'en reçoit
+          // rien, et garde donc son formulaire — c'est le créneau ouvert à qui
+          // n'a pas de compte Discord.
           lien: '',
           inscrits: compterInscrits(inscriptionsOS, date, texte(champ(l, 'Titre'))),
         }

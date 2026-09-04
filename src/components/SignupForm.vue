@@ -59,7 +59,7 @@ async function submit() {
     const subject = `Inscription — ${props.title} (${readableDate.value})`
     const body =
       `Bonjour,\n\nJe m'inscris à la soirée « ${props.title} » du ${when}.\n\n` +
-      `Pseudo Discord : ${name}\n\nMerci !`
+      `Pseudo ou prénom : ${name}\n\nMerci !`
     window.location.href = `${contactHref(subject)}&body=${encodeURIComponent(body)}`
     registered.value = false
     sent.value = true
@@ -99,14 +99,20 @@ async function submit() {
 
 <template>
   <form v-if="!sent" class="signup" @submit.prevent="submit">
-    <label class="signup__label" :for="`pseudo-${date}`">Pseudo Discord</label>
+    <!-- Pseudo Discord de préférence : c'est lui qui évite de compter deux fois
+         la même personne si elle se signale aussi sur le serveur. Mais un
+         prénom suffit — la soirée mensuelle est ouverte à qui n'a pas Discord,
+         et l'obliger à créer un compte pour s'inscrire le ferait fuir. -->
+    <label class="signup__label" :for="`pseudo-${date}`">
+      Pseudo Discord, ou prénom
+    </label>
     <div class="signup__row">
       <input
         :id="`pseudo-${date}`"
         v-model="pseudo"
         class="signup__input"
         type="text"
-        placeholder="votre pseudo"
+        placeholder="votre pseudo Discord, ou votre prénom"
         required
       />
       <button class="btn btn--primary signup__btn" type="submit" :disabled="sending">
