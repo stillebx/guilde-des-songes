@@ -8,10 +8,11 @@
 //   date   : ISO (YYYY-MM-DD) — sert au tri et au filtrage des parties passées.
 //   time   : horaire libre, affiché tel quel.
 //   kind   : une clé de KIND_LABELS ci-dessous — pilote couleur et libellé.
-//   places : nombre de places ; au-delà de 0, le formulaire du site s'ouvre.
+//   places : nombre de places ; au-delà de 0, le compteur s'affiche.
 //   complet: `true` pour une table fermée sans compteur — l'équivalent du
 //            « Complet » de la colonne « Places » de la feuille.
-//   signup : lien du salon Discord de la partie, à défaut de places.
+//   signup : lien du salon Discord. Présent, il l'emporte sur le formulaire
+//            du site : le compteur s'affiche, l'inscription se fait là-bas.
 export const events = []
 
 export const KIND_LABELS = {

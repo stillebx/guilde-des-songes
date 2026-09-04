@@ -120,11 +120,17 @@ function versEvenement(ligne) {
     places: places,
     inscrits: Number(ligne.inscrits) || 0,
     complet: complet,
-    // C'est le nombre de places qui ouvre les inscriptions en ligne, quel que
-    // soit le type : une partie, une soirée mensuelle ou un événement hors
-    // partie peuvent tous en proposer. Sans places, ou table déclarée complète :
-    // ni formulaire ni compteur.
-    form: places > 0 && !complet,
+    // Compter et inscrire sont deux choses distinctes.
+    //
+    // Le compteur ne dépend que des places : une table peut annoncer « 2 places
+    // restantes » tout en confiant l'inscription à son salon Discord — c'est le
+    // cas des tables d'un MJ, dont les places sont recopiées de son annonce et
+    // les inscrits relevés sur l'événement Discord.
+    //
+    // Le formulaire du site, lui, ne s'ouvre qu'à défaut de lien Discord : là où
+    // la Guilde accueille sans passer par le serveur (les soirées mensuelles),
+    // et là seulement. Rien ne sert de proposer deux guichets pour une table.
+    form: places > 0 && !complet && !ligne.lien,
     signup: ligne.lien || undefined,
   }
 }
