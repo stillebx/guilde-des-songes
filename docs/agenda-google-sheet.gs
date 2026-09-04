@@ -84,6 +84,12 @@ const ONGLET_INSCRIPTIONS_OS = 'Inscriptions OS'
 const ONGLET_INSCRIPTIONS_EVENEMENTS = 'Inscriptions événements'
 const ONGLET_ARCHIVES = 'Archives'
 
+// Lien avec les événements Discord. Le jeton du bot ne vit pas dans ce fichier :
+// il se colle dans Paramètres du projet › Propriétés du script, sous ce nom.
+const CLE_JETON_DISCORD = 'DISCORD_TOKEN'
+const ORIGINE_SITE = 'Site'
+const ORIGINE_DISCORD = 'Discord'
+
 // Types de l'onglet « Événements ». Les soirées mensuelles ont leur propre
 // onglet : elles ne figurent pas dans cette liste.
 const TYPES = ['campagne', 'one-shot', 'événement']
@@ -186,6 +192,14 @@ const COLONNES_INSCRIPTIONS = [
   { nom: 'Intitulé', largeur: 240, aide: 'Titre exact de la ligne concernée. À remplir si deux choses ont lieu le même jour.' },
   { nom: 'Pseudo Discord', largeur: 180, aide: 'Pseudo de la personne inscrite.' },
   { nom: 'Rang', largeur: 70, aide: 'Ordre d’arrivée, calculé par le site.' },
+  {
+    nom: 'Origine',
+    largeur: 90,
+    aide:
+      '« Site » pour une inscription passée par le formulaire, « Discord » pour ' +
+      'une personne ayant cliqué « Intéressé·e » sur l’événement. Les lignes ' +
+      'Discord sont gérées par le script : ne pas les modifier à la main.',
+  },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -215,6 +229,7 @@ function initialiser() {
 
   rafraichirStatuts()
   installerArchivageQuotidien()
+  installerSynchroDiscord()
 
   if (evenements.getLastRow() < 2) {
     evenements.appendRow([
@@ -510,6 +525,8 @@ function reglerMensuelles(feuille) {
  * Tourne chaque nuit, et à la demande par le menu « Guilde ».
  */
 function archiver() {
+  synchroniserDiscord()
+
   const classeur = SpreadsheetApp.getActiveSpreadsheet()
   const evenements = classeur.getSheetByName(ONGLET_EVENEMENTS)
   const mensuelles = classeur.getSheetByName(ONGLET_MENSUELLES)
@@ -658,6 +675,7 @@ function regrouperRegistre(nomOnglet) {
         bloc.intitule,
         texte(champ(i, 'Pseudo Discord')),
         index + 1,
+        texte(champ(i, 'Origine')),
       ])
 
     const nom = bloc.intitule || 'Sans intitulé'
@@ -735,6 +753,166 @@ function estTerminee(ligne, date, aujourdhui) {
   return date < aujourdhui
 }
 
+/* ------------------------------------------------------------------ */
+/*  Événements Discord                                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Reporte dans le registre les personnes qui ont cliqué « Intéressé·e » sur
+ * l'événement Discord d'une ligne d'agenda. Elles y deviennent des inscriptions
+ * comme les autres, marquées « Discord » : le site décompte donc les places et
+ * bascule sur « Complet » sans rien savoir de Discord.
+ *
+ * Sans jeton de bot enregistré, la fonction ne fait rien — le reste du script
+ * continue de tourner normalement.
+ *
+ * Mise en place, une fois :
+ * 1. discord.com/developers › New Application › Bot › Reset Token, copier.
+ * 2. Inviter le bot sur le serveur de la Guilde (il n'a besoin que de lire).
+ * 3. Apps Script › Paramètres du projet › Propriétés du script › Ajouter :
+ *    nom `DISCORD_TOKEN`, valeur le jeton. Il ne doit jamais être écrit ici.
+ *
+ * Le bouton « Intéressé·e » n'est pas un engagement ferme : le compte inclut
+ * les curieux. C'est la limite de l'exercice, pas un défaut du script.
+ */
+function synchroniserDiscord() {
+  const jeton = PropertiesService.getScriptProperties().getProperty(CLE_JETON_DISCORD)
+  if (!jeton) return
+
+  const aujourdhui = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')
+
+  lignes(ONGLET_EVENEMENTS).forEach(function (l) {
+    const date = versDateIso(champ(l, 'Date'))
+    const titre = texte(champ(l, 'Titre'))
+    const ids = identifiantsEvenementDiscord(champ(l, 'Lien Discord'))
+
+    // Rien à suivre sur une date passée : le registre garde son dernier état.
+    if (!date || !titre || !ids || date < aujourdhui) return
+
+    const pseudos = interessesDiscord(ids, jeton)
+    if (pseudos === null) return // appel en échec : on ne touche à rien
+
+    reporterInteresses(date, titre, pseudos)
+  })
+}
+
+/** « https://discord.com/events/123/456 » → { serveur: '123', evenement: '456' }. */
+function identifiantsEvenementDiscord(lien) {
+  const m = texte(lien).match(/events\/(\d+)\/(\d+)/)
+  return m ? { serveur: m[1], evenement: m[2] } : null
+}
+
+/**
+ * Pseudos des personnes intéressées, ou `null` si Discord n'a pas répondu.
+ * `null` et « personne » ne veulent pas dire la même chose : sur un appel
+ * raté, il ne faut surtout pas conclure que tout le monde s'est désinscrit.
+ */
+function interessesDiscord(ids, jeton) {
+  const pseudos = []
+  let apres = ''
+
+  // L'API renvoie 100 personnes au plus par appel : on déroule.
+  for (let page = 0; page < 10; page++) {
+    const url =
+      `https://discord.com/api/v10/guilds/${ids.serveur}/scheduled-events/${ids.evenement}` +
+      `/users?limit=100&with_member=true${apres ? `&after=${apres}` : ''}`
+
+    const reponse = UrlFetchApp.fetch(url, {
+      method: 'get',
+      headers: { Authorization: `Bot ${jeton}` },
+      muteHttpExceptions: true,
+    })
+
+    if (reponse.getResponseCode() !== 200) return null
+
+    const lot = JSON.parse(reponse.getContentText())
+    if (!lot.length) break
+
+    lot.forEach(function (entree) {
+      const utilisateur = entree.user || {}
+      const membre = entree.member || {}
+      // Le surnom sur le serveur d'abord : c'est sous ce nom qu'on se connaît.
+      pseudos.push(texte(membre.nick || utilisateur.global_name || utilisateur.username))
+    })
+
+    apres = lot[lot.length - 1].user ? lot[lot.length - 1].user.id : ''
+    if (lot.length < 100 || !apres) break
+  }
+
+  return pseudos.filter(function (p) { return p })
+}
+
+/**
+ * Met le registre au diapason de Discord pour une ligne d'agenda : ajoute les
+ * pseudos apparus, retire les lignes « Discord » de ceux qui se sont rétractés.
+ * Une inscription venue du site n'est jamais touchée, et un pseudo déjà présent
+ * n'est pas ajouté deux fois — c'est ce qui évite le double comptage quand
+ * quelqu'un s'inscrit des deux côtés.
+ */
+function reporterInteresses(date, titre, pseudos) {
+  const classeur = SpreadsheetApp.getActiveSpreadsheet()
+  const feuille = onglet(classeur, ONGLET_INSCRIPTIONS_EVENEMENTS, COLONNES_INSCRIPTIONS)
+  const valeurs = feuille.getDataRange().getValues()
+  const entetes = valeurs[0].map((e) => cleEntete(texte(e)))
+
+  const colonne = (nom) => entetes.indexOf(cleEntete(nom))
+  const iDate = colonne('Date')
+  const iTitre = colonne('Intitulé')
+  const iPseudo = colonne('Pseudo Discord')
+  const iOrigine = colonne('Origine')
+  if (iDate === -1 || iPseudo === -1 || iOrigine === -1) return
+
+  const memeSoiree = function (ligne) {
+    if (estBandeau(ligne[0])) return false
+    if (versDateIso(ligne[iDate]) !== date) return false
+    const intitule = texte(ligne[iTitre])
+    return !intitule || intitule.toLowerCase() === titre.toLowerCase()
+  }
+
+  const presents = []
+  const aRetirer = []
+
+  valeurs.slice(1).forEach(function (ligne, index) {
+    if (!memeSoiree(ligne)) return
+    const pseudo = texte(ligne[iPseudo])
+    presents.push(pseudo.toLowerCase())
+
+    const venuDeDiscord = texte(ligne[iOrigine]) === ORIGINE_DISCORD
+    if (venuDeDiscord && pseudos.map((p) => p.toLowerCase()).indexOf(pseudo.toLowerCase()) === -1) {
+      aRetirer.push(index + 2)
+    }
+  })
+
+  // De bas en haut : supprimer une ligne décale toutes celles d'en dessous.
+  aRetirer.reverse().forEach(function (ligne) { feuille.deleteRow(ligne) })
+
+  const maintenant = new Date()
+  const fuseau = Session.getScriptTimeZone()
+  let rang = presents.length - aRetirer.length
+
+  pseudos.forEach(function (pseudo) {
+    if (presents.indexOf(pseudo.toLowerCase()) !== -1) return
+    rang++
+    feuille.appendRow([
+      Utilities.formatDate(maintenant, fuseau, 'dd/MM/yyyy'),
+      Utilities.formatDate(maintenant, fuseau, 'HH:mm:ss'),
+      date,
+      titre,
+      pseudo,
+      rang,
+      ORIGINE_DISCORD,
+    ])
+  })
+}
+
+/** Programme la relève des événements Discord, sans doublonner le déclencheur. */
+function installerSynchroDiscord() {
+  ScriptApp.getProjectTriggers().forEach(function (declencheur) {
+    if (declencheur.getHandlerFunction() === 'synchroniserDiscord') ScriptApp.deleteTrigger(declencheur)
+  })
+  ScriptApp.newTrigger('synchroniserDiscord').timeBased().everyMinutes(15).create()
+}
+
 /** Programme l'archivage chaque nuit, sans doublonner le déclencheur. */
 function installerArchivageQuotidien() {
   ScriptApp.getProjectTriggers().forEach(function (declencheur) {
@@ -750,6 +928,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Guilde')
     .addItem('Ranger : archives et inscriptions', 'archiver')
+    .addItem('Relever les inscrits Discord', 'synchroniserDiscord')
     .addToUi()
 }
 
@@ -1076,6 +1255,7 @@ function doPost(e) {
       titre,
       pseudo,
       rang,
+      ORIGINE_SITE,
     ])
 
     return reponse({
