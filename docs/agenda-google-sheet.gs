@@ -104,7 +104,15 @@ const GRIS_FOND = '#e7e2e2'
 const GRIS_TRAIT = '#6b5b5e'
 
 // Colonne « Statut » de l'onglet « Événements » : calculée, jamais publiée.
-const COLONNE_STATUT = 11 // K, dans l'onglet « Événements »
+// Positions dans l'onglet « Événements ». Nommées, parce qu'un numéro nu au
+// milieu du code se périme au premier déplacement de colonne.
+const COLONNE_STATUT = 1
+const COLONNE_DATE = 2
+const COLONNE_HORAIRE = 3
+const COLONNE_TYPE = 4
+const COLONNE_DESCRIPTION = 9
+const COLONNE_PLACES = 10
+const COLONNE_LIEN = 11
 const STATUT_TERMINE = 'terminé'
 const STATUT_A_VENIR = 'à venir'
 
@@ -117,6 +125,15 @@ const AIDE_PLACES =
   'ferme, et le site affiche « Complet ».'
 
 const COLONNES_EVENEMENTS = [
+  {
+    nom: 'Statut',
+    largeur: 90,
+    aide:
+      'Rempli tout seul à partir de la date : « à venir » ou « terminé ». Se met ' +
+      'à jour à l’ouverture du classeur, dès qu’une date change, et chaque nuit. ' +
+      'Colonne de travail, jamais publiée sur le site — inutile d’y écrire, elle ' +
+      'sera réécrite.',
+  },
   { nom: 'Date', largeur: 110, aide: "Date de la partie. Tapez 10/10/2026 : la colonne l'affiche en 2026-10-10." },
   { nom: 'Horaire', largeur: 130, aide: 'Ex. 20h00, ou 18h30 – 23h45. « 20h » et « 20:00 » sont corrigés tout seuls. Peut rester vide.' },
   { nom: 'Type', largeur: 120, aide: 'Liste déroulante. « événement » = hors partie (assemblée, atelier, festival…).' },
@@ -127,15 +144,6 @@ const COLONNES_EVENEMENTS = [
   { nom: 'Description', largeur: 380, aide: 'Deux ou trois phrases, affichées quand on ouvre la ligne sur le site.' },
   { nom: 'Places', largeur: 90, aide: AIDE_PLACES },
   { nom: 'Lien Discord', largeur: 240, aide: 'Salon de la partie : le bouton « S’inscrire » du site y renvoie. Utilisé seulement si « Places » est vide.' },
-  {
-    nom: 'Statut',
-    largeur: 90,
-    aide:
-      'Rempli tout seul à partir de la date : « à venir » ou « terminé ». Se met ' +
-      'à jour à l’ouverture du classeur, dès qu’une date change, et chaque nuit. ' +
-      'Colonne de travail, jamais publiée sur le site — inutile d’y écrire, elle ' +
-      'sera réécrite.',
-  },
 ]
 
 const COLONNES_MENSUELLES = [
@@ -188,11 +196,15 @@ const COLONNES_INSCRIPTIONS = [
 function initialiser() {
   const classeur = SpreadsheetApp.getActiveSpreadsheet()
 
+  // Reprises d'abord, en tout premier : `onglet()` réécrit les en-têtes, et une
+  // fois réécrits plus rien ne dit à quoi ressemblait la feuille d'avant.
+  migrerColonneStatut(classeur)
+  mettreDeCoteAnciennesArchives(classeur)
+
   const evenements = onglet(classeur, ONGLET_EVENEMENTS, COLONNES_EVENEMENTS)
   const mensuelles = onglet(classeur, ONGLET_MENSUELLES, COLONNES_MENSUELLES)
   const inscriptionsOS = onglet(classeur, ONGLET_INSCRIPTIONS_OS, COLONNES_INSCRIPTIONS)
   const inscriptionsEv = onglet(classeur, ONGLET_INSCRIPTIONS_EVENEMENTS, COLONNES_INSCRIPTIONS)
-  mettreDeCoteAnciennesArchives(classeur)
   const archives = onglet(classeur, ONGLET_ARCHIVES, COLONNES_ARCHIVES)
 
   reglerEvenements(evenements)
@@ -206,6 +218,7 @@ function initialiser() {
 
   if (evenements.getLastRow() < 2) {
     evenements.appendRow([
+      '',
       '2026-09-19',
       '20h00',
       'one-shot',
@@ -214,7 +227,6 @@ function initialiser() {
       'Espace Baudelaire',
       '',
       "Une histoire complète en une soirée dans le Vieux Monde. Aucune connaissance de l'univers requise.",
-      '',
       '',
       '',
     ])
@@ -231,6 +243,38 @@ function initialiser() {
       'Une histoire complète en une soirée, ouverte à tout le monde : aucune expérience requise, tout le matériel est fourni.',
       12,
     ])
+  }
+
+  // Ranger dans la foulée : sans cela « Archives » resterait vide jusqu'au
+  // passage de la nuit, et l'on croirait l'installation ratée.
+  archiver()
+}
+
+/**
+ * Reprise des feuilles installées avant que « Statut » ne passe en tête.
+ *
+ * L'en-tête serait réécrit par `onglet()` sans que les données bougent : les
+ * colonnes se retrouveraient décalées d'un cran sous des intitulés faux. On
+ * insère donc une vraie colonne en tête, et on supprime l'ancienne colonne
+ * « Statut » restée à droite. Une feuille déjà à jour, ou dont l'en-tête ne
+ * ressemble à rien de connu, n'est pas touchée.
+ */
+function migrerColonneStatut(classeur) {
+  const feuille = classeur.getSheetByName(ONGLET_EVENEMENTS)
+  if (!feuille) return
+
+  const premiere = cleEntete(texte(feuille.getRange(1, 1).getValue()))
+  if (premiere === cleEntete('Statut')) return
+  if (premiere !== cleEntete('Date')) return
+
+  feuille.insertColumnBefore(1)
+
+  const entetes = feuille.getRange(1, 1, 1, feuille.getLastColumn()).getValues()[0]
+  for (let i = entetes.length - 1; i >= 1; i--) {
+    if (cleEntete(texte(entetes[i])) === cleEntete('Statut')) {
+      feuille.deleteColumn(i + 1)
+      break
+    }
   }
 }
 
@@ -317,7 +361,7 @@ function rafraichirStatuts() {
   if (!feuille || feuille.getLastRow() < 2) return
 
   const hauteur = feuille.getLastRow() - 1
-  const dates = feuille.getRange(2, 1, hauteur, 1).getValues()
+  const dates = feuille.getRange(2, COLONNE_DATE, hauteur, 1).getValues()
   const actuels = feuille.getRange(2, COLONNE_STATUT, hauteur, 1).getValues()
   const aujourdhui = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')
 
@@ -341,16 +385,16 @@ function statutPour(valeurDate, aujourdhui) {
 /** Statut d'une seule ligne, après modification de sa date. */
 function majStatutLigne(feuille, ligne) {
   const aujourdhui = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')
-  const date = feuille.getRange(ligne, 1).getValue()
+  const date = feuille.getRange(ligne, COLONNE_DATE).getValue()
   feuille.getRange(ligne, COLONNE_STATUT).setValue(statutPour(date, aujourdhui))
 }
 
 function reglerEvenements(feuille) {
   const lignes = nbLignes(feuille)
-  colonneDate(feuille, 1)
+  colonneDate(feuille, COLONNE_DATE)
 
   feuille
-    .getRange(2, 3, lignes, 1)
+    .getRange(2, COLONNE_TYPE, lignes, 1)
     .setDataValidation(
       SpreadsheetApp.newDataValidation()
         .requireValueInList(TYPES, true)
@@ -359,15 +403,15 @@ function reglerEvenements(feuille) {
         .build(),
     )
 
-  colonnePlaces(feuille, 9, lignes)
+  colonnePlaces(feuille, COLONNE_PLACES, lignes)
 
-  feuille.getRange(2, 8, lignes, 1).setWrap(true)
+  feuille.getRange(2, COLONNE_DESCRIPTION, lignes, 1).setWrap(true)
 
   // Chaque ligne prend la couleur de son type — même code que sur le site.
   const zone = feuille.getRange(2, 1, lignes, COLONNES_EVENEMENTS.length)
   const regles = TYPES.map((type) =>
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied(`=$C2="${type}"`)
+      .whenFormulaSatisfied(`=$D2="${type}"`)
       .setBackground(COULEURS[type].fond)
       .setFontColor(COULEURS[type].trait)
       .setRanges([zone])
@@ -375,14 +419,13 @@ function reglerEvenements(feuille) {
   )
 
   // Une ligne passée s'efface visuellement : elle reste lisible, mais ne tire
-  // plus l'œil au milieu des dates à venir. Règle posée après celles des types,
-  // donc prioritaire sur la couleur de fond.
+  // plus l'œil au milieu des dates à venir. Grisée seulement — pas d'italique,
+  // qui rendrait la lecture pénible sur des lignes entières.
   regles.unshift(
     SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied(`=$K2="${STATUT_TERMINE}"`)
+      .whenFormulaSatisfied(`=$A2="${STATUT_TERMINE}"`)
       .setBackground(GRIS_FOND)
       .setFontColor(GRIS_TRAIT)
-      .setItalic(true)
       .setRanges([zone])
       .build(),
   )
@@ -682,14 +725,19 @@ function onEdit(e) {
   if (valeur === '' || valeur === null) return
 
   if (nom === ONGLET_EVENEMENTS) {
-    if (colonne === 1) {
+    // Colonne « Statut » : elle appartient au script. Ce qu'on y tape est
+    // remplacé par la valeur qu'appelle la date, plutôt que laissé à côté.
+    if (colonne === COLONNE_STATUT) return majStatutLigne(feuille, e.range.getRow())
+    if (colonne === COLONNE_DATE) {
       ecrire(e.range, versDateIso(valeur))
       return majStatutLigne(feuille, e.range.getRow())
     }
-    if (colonne === 2) return ecrire(e.range, normaliserHoraire(valeur))
-    if (colonne === 3) return ecrire(e.range, normaliserType(valeur))
-    if (colonne === 9) return ecrire(e.range, normaliserPlaces(valeur))
-    if ([4, 5, 6, 7, 8, 10].includes(colonne)) return ecrire(e.range, String(valeur).trim())
+    if (colonne === COLONNE_HORAIRE) return ecrire(e.range, normaliserHoraire(valeur))
+    if (colonne === COLONNE_TYPE) return ecrire(e.range, normaliserType(valeur))
+    if (colonne === COLONNE_PLACES) return ecrire(e.range, normaliserPlaces(valeur))
+    if ([5, 6, 7, 8, COLONNE_DESCRIPTION, COLONNE_LIEN].includes(colonne)) {
+      return ecrire(e.range, String(valeur).trim())
+    }
   }
 
   if (nom === ONGLET_MENSUELLES) {
