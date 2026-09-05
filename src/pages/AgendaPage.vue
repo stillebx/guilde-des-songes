@@ -5,7 +5,13 @@ import AgendaCalendar from '../components/AgendaCalendar.vue'
 import SignupForm from '../components/SignupForm.vue'
 import EventDialog from '../components/EventDialog.vue'
 import { events as localEvents, KIND_LABELS } from '../data/events.js'
-import { fetchAgenda, placesRestantes } from '../data/sheet.js'
+import {
+  agendaPerime,
+  agendaRecu,
+  fetchAgenda,
+  placesRestantes,
+  rechargerAgenda,
+} from '../data/sheet.js'
 import { typo } from '../typographie.js'
 
 // Six vignettes par page (3 colonnes × 2 lignes) : la page reste courte quel
@@ -20,18 +26,36 @@ const today = new Date().toISOString().slice(0, 10)
 // Rien n'est affiché avant la réponse de la feuille : afficher les parties
 // locales tout de suite les faisait apparaître puis disparaître au profit de
 // celles de la feuille, comme si l'agenda annonçait des parties fantômes.
-const events = ref([])
-const chargement = ref(true)
-const feuilleMuette = ref(false)
+//
+// La requête, elle, est partie dès l'ouverture du site (main.js) : le plus
+// souvent la réponse est déjà là quand on arrive ici, et l'agenda s'affiche du
+// premier coup. On part donc de ce qui est déjà en mémoire.
+const dejaRecu = agendaRecu()
 
-async function chargerAgenda() {
-  const depuisFeuille = await fetchAgenda()
+const events = ref(dejaRecu === undefined ? [] : dejaRecu || localEvents)
+const chargement = ref(dejaRecu === undefined)
+const feuilleMuette = ref(dejaRecu === null)
+
+function afficher(depuisFeuille) {
   feuilleMuette.value = !depuisFeuille
   events.value = depuisFeuille || localEvents
   chargement.value = false
 }
 
-onMounted(chargerAgenda)
+onMounted(async () => {
+  if (chargement.value) {
+    afficher(await fetchAgenda())
+    return
+  }
+
+  // Agenda déjà à l'écran : on ne redemande la feuille que si la réponse a
+  // vieilli — les places restantes bougent — et le remplacement se fait en
+  // arrière-plan, sans écran d'attente. Une feuille muette ne l'efface pas.
+  if (agendaPerime()) {
+    const frais = await rechargerAgenda()
+    if (frais) afficher(frais)
+  }
+})
 
 const sorted = computed(() => [...events.value].sort((a, b) => a.date.localeCompare(b.date)))
 
@@ -195,7 +219,13 @@ function formatShortDate(iso) {
         kicker="Agenda"
         title="L'agenda des parties et des événements"
         lead="Les salons Discord permettent aux maîtres du jeu d'annoncer leurs parties. Les joueuses et joueurs peuvent s'y inscrire."
-      />
+      >
+        <p>
+          Les soirées mensuelles sont ouvertes à toutes et tous. Il n'est pas nécessaire
+          d'avoir un compte Discord pour s'y inscrire&nbsp;: le site vous propose un
+          formulaire. Indiquez simplement un pseudo personnel.
+        </p>
+      </PageHeading>
 
       <AgendaCalendar
         :marks="marks"

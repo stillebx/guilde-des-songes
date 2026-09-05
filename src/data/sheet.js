@@ -13,12 +13,65 @@ export const SHEET_ENDPOINT =
 // pré-vol CORS — Apps Script ne répond pas aux requêtes OPTIONS.
 const ENTETES_SIMPLES = { 'Content-Type': 'text/plain;charset=utf-8' }
 
+// L'agenda part en même temps que le reste du site : `prechargerAgenda()` est
+// appelée au démarrage (main.js), bien avant qu'on ouvre la page Agenda. La
+// feuille Google met une à deux secondes à répondre ; pendant ce temps le
+// visiteur lit l'accueil, et la page Agenda s'affiche d'un coup quand il y
+// arrive, sans passer par « Chargement de l'agenda… ».
+let promesse = null
+// Réponse en mémoire : un tableau, `null` si la feuille est muette, et
+// `undefined` tant qu'elle n'a pas répondu — les trois cas sont distincts.
+let recu
+let recuLe = 0
+
+// Au-delà de ce délai, revenir sur la page redemande la feuille en arrière-plan :
+// les places restantes bougent au fil des inscriptions.
+const FRAICHEUR_MS = 5 * 60 * 1000
+
+/** Lance la requête si elle n'est pas déjà partie, et renvoie sa promesse. */
+export function prechargerAgenda() {
+  if (!promesse) {
+    promesse = demanderAgenda().then((evenements) => {
+      recu = evenements
+      recuLe = Date.now()
+      return evenements
+    })
+  }
+  return promesse
+}
+
 /**
  * Agenda publié dans la feuille.
  * Renvoie `null` si la feuille n'est pas configurée ou ne répond pas : l'appelant
  * garde alors les parties locales plutôt que d'afficher un agenda vide.
  */
-export async function fetchAgenda() {
+export function fetchAgenda() {
+  return prechargerAgenda()
+}
+
+/** Réponse déjà reçue, ou `undefined` tant que la feuille n'a pas répondu. */
+export function agendaRecu() {
+  return recu
+}
+
+/** Vrai quand la réponse en mémoire a vieilli et mérite d'être redemandée. */
+export function agendaPerime() {
+  return recu !== undefined && Date.now() - recuLe > FRAICHEUR_MS
+}
+
+/** Redemande la feuille. Une réponse muette ne remplace pas ce qu'on a déjà. */
+export function rechargerAgenda() {
+  return demanderAgenda().then((evenements) => {
+    if (evenements) {
+      recu = evenements
+      recuLe = Date.now()
+      promesse = Promise.resolve(evenements)
+    }
+    return evenements
+  })
+}
+
+async function demanderAgenda() {
   if (!SHEET_ENDPOINT) return null
 
   try {

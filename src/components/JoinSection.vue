@@ -8,7 +8,9 @@ const memberships = [
     icon: 'user',
     name: 'Mineur·es',
     price: 'Gratuit',
-    detail: "L'adhésion est offerte aux moins de 18 ans.",
+    detail:
+      "L'adhésion est offerte aux moins de 18 ans. Autorisation parentale requise. " +
+      'Les parents peuvent être accompagnateurs.',
   },
   {
     icon: 'coin',

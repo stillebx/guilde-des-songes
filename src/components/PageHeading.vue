@@ -13,6 +13,8 @@ defineProps({
     <p class="section__kicker">{{ kicker }}</p>
     <h1 class="page-heading__title">{{ title }}</h1>
     <p v-if="lead" class="page-heading__lead">{{ lead }}</p>
+    <!-- Paragraphes supplémentaires propres à la page, au même corps que le chapô. -->
+    <slot />
   </header>
 </template>
 
@@ -26,9 +28,15 @@ defineProps({
   margin-bottom: 1rem;
 }
 
-.page-heading__lead {
+.page-heading__lead,
+.page-heading :slotted(p) {
   color: var(--text-muted);
   font-size: var(--lead-size);
   text-align: justify;
+}
+
+/* `p { margin: 0 }` partout : c'est ici qu'on redonne l'air entre les paragraphes. */
+.page-heading :slotted(p) {
+  margin-top: 0.9rem;
 }
 </style>
