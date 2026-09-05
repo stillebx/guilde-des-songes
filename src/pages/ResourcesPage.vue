@@ -4,13 +4,6 @@ import ContactLink from '../components/ContactLink.vue'
 import PageHeading from '../components/PageHeading.vue'
 import { ressources } from '../data/ressources.js'
 import { typo } from '../typographie.js'
-
-// Vite ne réécrit que les chemins écrits en dur dans le template : un `:href`
-// calculé lui échappe et resterait à la racine du domaine, alors que le site
-// vit dans un sous-dossier sur GitHub Pages. On préfixe donc à la main.
-function urlDocument(chemin) {
-  return import.meta.env.BASE_URL.replace(/\/$/, '') + chemin
-}
 </script>
 
 <template>
@@ -33,16 +26,16 @@ function urlDocument(chemin) {
 
           <div class="resource__actions">
             <a
-              v-if="ressource.fichier"
+              v-if="ressource.url"
               class="btn btn--primary resource__action"
-              :href="urlDocument(ressource.fichier)"
-              download
+              :href="ressource.url"
+              :download="ressource.nomFichier"
             >
               <IconGlyph name="download" />
               Télécharger
             </a>
-            <!-- Document annoncé mais pas encore écrit : on le dit, plutôt que
-                 de proposer un bouton qui ne mènerait nulle part. -->
+            <!-- Fichier pas encore déposé dans `src/documents/` : on le dit,
+                 plutôt que de proposer un bouton qui ne mènerait nulle part. -->
             <span v-else class="resource__soon">Bientôt disponible</span>
           </div>
         </li>
@@ -57,32 +50,54 @@ function urlDocument(chemin) {
 </template>
 
 <style scoped>
+/* Deux documents seulement : côte à côte plutôt qu'en bandes pleine largeur,
+   où quatre lignes de texte se perdaient sur 1060 px. */
 .resources {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 1.5rem;
 }
 
+/* Vignette carrée, contenu centré dans son cadre. `aspect-ratio` sur un enfant
+   de grille donne un carré tant que le contenu y tient, et laisse la vignette
+   grandir plutôt que déborder s'il devient plus haut (écran étroit, texte long). */
 .resource {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  aspect-ratio: 1;
   background: var(--bg-panel);
   border-radius: var(--radius);
-  padding: 1.75rem;
+  padding: 2rem;
   color: var(--text);
   box-shadow: var(--shadow-out);
   transition: box-shadow 0.3s ease;
+}
+
+/* Une seule colonne : un carré de 327 px n'a plus rien d'un cadre, il n'ajoute
+   que du vide au-dessus et au-dessous du texte. */
+@media (max-width: 660px) {
+  .resource {
+    aspect-ratio: auto;
+    padding: 1.75rem;
+  }
 }
 
 .resource:hover {
   box-shadow: var(--shadow-out), var(--glow);
 }
 
-/* Même grammaire que le kicker des sections, précédé de la pastille en creux. */
+/* Même grammaire que le kicker des sections, sous la pastille en creux. */
 .resource__state {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.7rem;
   color: var(--accent);
   font-size: 0.8rem;
   font-weight: 700;
@@ -93,13 +108,13 @@ function urlDocument(chemin) {
 
 .resource__icon {
   flex: none;
-  width: 38px;
-  height: 38px;
+  width: 56px;
+  height: 56px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   box-shadow: var(--shadow-in-sm);
-  font-size: 1.15rem;
+  font-size: 1.6rem;
   letter-spacing: normal;
 }
 
@@ -110,7 +125,7 @@ function urlDocument(chemin) {
 
 .resource__text {
   color: var(--text-muted);
-  text-align: justify;
+  max-width: 34ch;
 }
 
 .resource__actions {
@@ -140,5 +155,6 @@ function urlDocument(chemin) {
 .resources__note {
   color: var(--text-muted);
   margin-top: 2rem;
+  text-align: center;
 }
 </style>

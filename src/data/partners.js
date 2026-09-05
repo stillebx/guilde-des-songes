@@ -38,14 +38,16 @@ export const partners = [
     icon: 'dice',
     name: 'Ludimania',
     address: 'Espace Tabourot des Accords, 21850 Saint-Apollinaire',
-    text: "Ludimania est le festival de jeu de Saint-Apollinaire, aux portes de Dijon.\nDeux jours gratuits chaque année, avec des éditeurs, des animations et une nocturne le samedi.",
+    text: "Ludimania est le festival de jeu de Saint-Apollinaire, près de Dijon.\nDeux jours gratuits chaque année, avec éditeurs et animations.",
     href: 'https://ludimania.fr/',
   },
   {
-    // Ni boutique ni lieu : un duo d'auteurs, donc pas d'adresse à afficher.
+    // Ni boutique ni lieu : un duo d'auteurs. La ligne d'adresse dit la ville,
+    // sans rue — c'est ce qui les rattache à la Guilde.
     icon: 'book',
     name: 'Tales of C.',
-    text: "Tales of C. écrit des scénarios d'ambiance lovecraftienne ancrés dans l'Histoire, indépendants de tout système — dont Magnitogorsk, une enquête en URSS en 1932.\nLes PDF sont en accès libre et les livres imprimés à la demande, à prix coûtant.",
+    address: 'Dijon',
+    text: "Tales of C. est un duo d'auteurs dijonnais de scénarios lovecraftiens.\nLeurs textes sont ancrés dans l'Histoire, et leurs PDF en accès libre.",
     href: 'https://talesofc.fr/',
   },
 ]

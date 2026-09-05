@@ -123,6 +123,13 @@ const icons = {
     { d: 'M6 4.9h12a2.5 2.5 0 0 1 2.5 2.5v9.2a2.5 2.5 0 0 1-2.5 2.5H6a2.5 2.5 0 0 1-2.5-2.5V7.4A2.5 2.5 0 0 1 6 4.9z' },
     { d: 'M4 7.6l8 5.9 8-5.9' },
   ],
+  // Feuille de papier au coin corné : un document à lire ou à télécharger.
+  page: [
+    { d: 'M13.4 3.5H7A2.5 2.5 0 0 0 4.5 6v12A2.5 2.5 0 0 0 7 20.5h10a2.5 2.5 0 0 0 2.5-2.5V9.6l-6.1-6.1z' },
+    { d: 'M13.4 3.5v6.1h6.1' },
+    { d: 'M8.4 13.3h7.2' },
+    { d: 'M8.4 16.6h4.6' },
+  ],
   // Bulle de conversation : marque de citation pour les témoignages
   bubble: [
     { d: 'M6 4.8h12a2.5 2.5 0 0 1 2.5 2.5v6.4a2.5 2.5 0 0 1-2.5 2.5h-6.2l-4.3 3.3v-3.3H6a2.5 2.5 0 0 1-2.5-2.5V7.3A2.5 2.5 0 0 1 6 4.8z' },

@@ -1,16 +1,16 @@
 // Documents de la vie communautaire, listés sur la page Ressources.
 //
-// Pour publier un document : déposer le fichier dans `public/documents/`, puis
-// ajouter (ou compléter) son entrée ici.
+// Même principe que la gazette : déposer le fichier dans `src/documents/`
+// suffit. Vite le repère au build et le bouton « Télécharger » apparaît tout
+// seul ; tant qu'il n'est pas là, la vignette annonce le document au lieu
+// d'offrir un lien mort. L'extension n'a pas d'importance (.pdf, .png, .jpg…),
+// seul le nom du fichier compte.
 //   icon    : nom d'une icône d'IconGlyph.vue.
 //   name    : titre affiché sur la vignette.
+//   etat    : mention en haut de la vignette, à côté de la pastille.
 //   text    : à quoi sert le document, deux ou trois phrases.
-//   fichier : chemin depuis la racine du site — le bouton « Télécharger »
-//             n'apparaît que s'il est renseigné. Sans lui, la vignette annonce
-//             le document « à paraître » : un document en cours d'écriture a sa
-//             place ici, il dit à quoi s'attendre.
-//   etat    : mention affichée à la place de la date, en haut de la vignette.
-export const ressources = [
+//   fichier : nom du fichier attendu dans `src/documents/`, sans son extension.
+const entrees = [
   {
     icon: 'handshake',
     name: 'La charte du bon joueur',
@@ -19,19 +19,35 @@ export const ressources = [
       "Ce que la Guilde attend autour de la table, joueur·ses comme meneur·ses : " +
       'respect des personnes, sécurité émotionnelle et bonne tenue des parties. ' +
       'Le document est en cours de rédaction ; il sera publié ici.',
+    fichier: 'charte-du-bon-joueur',
   },
   {
-    icon: 'screen',
+    icon: 'page',
     name: "Le flyer de l'association",
     etat: 'Affiche',
     text:
       "L'affiche de la Guilde, à imprimer ou à faire circuler : accueil de tous " +
-      'niveaux, cotisation, soirées one-shot mensuelles, créneaux des locaux et ' +
-      'adresse de l’Annexe de la Maison Phare.',
-    // Le fichier n'est pas encore dans le dépôt. Déposer l'affiche dans
-    // `public/documents/` sous ce nom (.png, .jpg ou .pdf, au choix — le chemin
-    // doit juste correspondre), puis décommenter la ligne ci-dessous : le
-    // bouton « Télécharger » apparaît alors tout seul.
-    // fichier: '/documents/flyer-guilde-des-songes.png',
+      'niveaux, cotisation, soirées one-shot mensuelles et créneaux des locaux.',
+    fichier: 'flyer-guilde-des-songes',
   },
 ]
+
+// Tout ce qui est déposé dans `src/documents/`, quelle que soit l'extension.
+const fichiers = import.meta.glob('../documents/*', {
+  query: '?url',
+  import: 'default',
+  eager: true,
+})
+
+// `flyer-guilde-des-songes` → l'URL du fichier déposé et son nom complet, ou
+// rien du tout si personne ne l'a encore déposé.
+function trouver(nom) {
+  const entree = Object.entries(fichiers).find(([chemin]) => {
+    const base = chemin.split('/').pop()
+    return base.replace(/\.[^.]+$/, '') === nom
+  })
+  if (!entree) return {}
+  return { url: entree[1], nomFichier: entree[0].split('/').pop() }
+}
+
+export const ressources = entrees.map((entree) => ({ ...entree, ...trouver(entree.fichier) }))
