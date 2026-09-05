@@ -11,6 +11,7 @@ const homeSections = [
   { label: 'Qui sommes-nous', to: { name: 'home', hash: '#qui-sommes-nous' } },
   { label: 'Nos parties', to: { name: 'home', hash: '#activites' } },
   { label: 'Infos pratiques', to: { name: 'home', hash: '#infos-pratiques' } },
+  { label: 'Témoignages', to: { name: 'home', hash: '#temoignages' } },
   { label: 'Nous rejoindre', to: { name: 'home', hash: '#rejoindre' } },
 ]
 
