@@ -12,7 +12,7 @@ import { typo } from '../typographie.js'
       <PageHeading
         kicker="Nos partenaires"
         title="Celles et ceux qui nous accompagnent"
-        lead="La Guilde ne joue pas seule : des lieux, des boutiques, un festival et des créateurs nous accueillent, nous équipent et font vivre le jeu avec nous."
+        lead="Pour que la Guilde puisse fonctionner, des espaces en tout genre nous accueillent. Des boutiques, des bars et des festivals font vivre le jeu avec nous autour de Dijon."
       />
 
       <div class="partners">
