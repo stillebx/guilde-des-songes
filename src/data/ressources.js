@@ -13,14 +13,14 @@
 const entrees = [
   {
     icon: 'handshake',
-    name: 'La charte du bon joueur',
+    name: 'La charte pour de bonnes parties',
     etat: 'En préparation',
     // La mention « En préparation » et le bouton disent déjà que le document
     // s'écrit : le texte n'a plus qu'à dire ce qu'on y trouvera.
     text:
       "Ce que la Guilde attend autour de la table, joueur·ses comme meneur·ses : " +
       'respect des personnes et bonne tenue des parties.',
-    fichier: 'charte-du-bon-joueur',
+    fichier: 'charte-pour-de-bonnes-parties',
   },
   {
     icon: 'page',
