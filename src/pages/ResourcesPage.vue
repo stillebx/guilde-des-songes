@@ -61,31 +61,20 @@ import { typo } from '../typographie.js'
   gap: 1.5rem;
 }
 
-/* Vignette carrée, contenu centré dans son cadre. `aspect-ratio` sur un enfant
-   de grille donne un carré tant que le contenu y tient, et laisse la vignette
-   grandir plutôt que déborder s'il devient plus haut (écran étroit, texte long). */
+/* Contenu centré, hauteur libre : le même gabarit bas et large que les
+   vignettes des partenaires. Un carré laissait 200 px de vide sous le texte. */
 .resource {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  aspect-ratio: 1;
   background: var(--bg-panel);
   border-radius: var(--radius);
-  padding: 2rem;
+  padding: 1.5rem 1.75rem;
   color: var(--text);
   box-shadow: var(--shadow-out);
   transition: box-shadow 0.3s ease;
-}
-
-/* Une seule colonne : un carré de 327 px n'a plus rien d'un cadre, il n'ajoute
-   que du vide au-dessus et au-dessous du texte. */
-@media (max-width: 660px) {
-  .resource {
-    aspect-ratio: auto;
-    padding: 1.75rem;
-  }
 }
 
 .resource:hover {
@@ -108,13 +97,13 @@ import { typo } from '../typographie.js'
 
 .resource__icon {
   flex: none;
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   box-shadow: var(--shadow-in-sm);
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   letter-spacing: normal;
 }
 
@@ -125,7 +114,8 @@ import { typo } from '../typographie.js'
 
 .resource__text {
   color: var(--text-muted);
-  max-width: 34ch;
+  font-size: var(--card-text-size);
+  line-height: 1.4;
 }
 
 .resource__actions {
@@ -133,7 +123,7 @@ import { typo } from '../typographie.js'
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
-  margin-top: 1.25rem;
+  margin-top: 1rem;
 }
 
 .resource__action {

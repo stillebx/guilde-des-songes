@@ -15,10 +15,11 @@ const entrees = [
     icon: 'handshake',
     name: 'La charte du bon joueur',
     etat: 'En préparation',
+    // La mention « En préparation » et le bouton disent déjà que le document
+    // s'écrit : le texte n'a plus qu'à dire ce qu'on y trouvera.
     text:
       "Ce que la Guilde attend autour de la table, joueur·ses comme meneur·ses : " +
-      'respect des personnes, sécurité émotionnelle et bonne tenue des parties. ' +
-      'Le document est en cours de rédaction ; il sera publié ici.',
+      'respect des personnes et bonne tenue des parties.',
     fichier: 'charte-du-bon-joueur',
   },
   {
@@ -26,8 +27,8 @@ const entrees = [
     name: "Le flyer de l'association",
     etat: 'Affiche',
     text:
-      "L'affiche de la Guilde, à imprimer ou à faire circuler : accueil de tous " +
-      'niveaux, cotisation, soirées one-shot mensuelles et créneaux des locaux.',
+      "L'affiche de la Guilde, à imprimer ou à faire circuler : cotisation, " +
+      'soirées one-shot mensuelles et créneaux des locaux.',
     fichier: 'flyer-guilde-des-songes',
   },
 ]
