@@ -1,6 +1,7 @@
 // Partenaires de la Guilde. Ajouter une entrée ici l'affiche sur la page Partenaires.
 // La carte se lit : nom, puis adresse, puis courte description.
 // `href` et `perk` sont optionnels (sans `href`, la carte n'est pas cliquable).
+// `perk` accepte un avantage ou une liste : chacun devient sa propre pastille.
 //
 // Dans `text`, un `\n` force un retour à la ligne : la deuxième phrase part
 // ainsi à la ligne plutôt que de s'accrocher à la fin de la première.
@@ -32,6 +33,7 @@ export const partners = [
     name: 'La Clepsydre',
     address: '6 boulevard de la Trémouille, 21000 Dijon',
     text: "La Clepsydre est un bar à jeux où la consommation permet de s'amuser dans un endroit cosy et convivial.",
+    perk: ['Boisson offerte au MJ', 'Conso 4\u00a0€/h/personne'],
     href: 'http://laclepsydre.fr/',
   },
   {

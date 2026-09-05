@@ -4,6 +4,13 @@ import ContactLink from '../components/ContactLink.vue'
 import PageHeading from '../components/PageHeading.vue'
 import { partners } from '../data/partners.js'
 import { typo } from '../typographie.js'
+
+// `perk` accepte un avantage ou plusieurs : le pied de vignette aligne autant
+// de pastilles qu'il en reçoit, plutôt qu'une seule trop longue à lire.
+function avantages(partner) {
+  if (!partner.perk) return []
+  return Array.isArray(partner.perk) ? partner.perk : [partner.perk]
+}
 </script>
 
 <template>
@@ -38,7 +45,13 @@ import { typo } from '../typographie.js'
           <!-- Zone basse toujours présente : les descriptions restent alignées
                d'une vignette à l'autre, avec ou sans avantage adhérent. -->
           <div class="partner__foot">
-            <span v-if="partner.perk" class="partner__perk">{{ typo(partner.perk) }}</span>
+            <span
+              v-for="avantage in avantages(partner)"
+              :key="avantage"
+              class="partner__perk"
+            >
+              {{ typo(avantage) }}
+            </span>
           </div>
         </component>
       </div>
@@ -154,6 +167,8 @@ import { typo } from '../typographie.js'
   flex: none;
   min-height: 42px;
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   align-items: center;
   justify-content: center;
   margin-top: 0.75rem;
