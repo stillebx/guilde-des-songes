@@ -19,6 +19,7 @@ const pages = [
   { label: 'Agenda', to: { name: 'agenda' } },
   { label: 'Gazette', to: { name: 'gazette' } },
   { label: 'Partenaires', to: { name: 'partners' } },
+  { label: 'Ressources', to: { name: 'resources' } },
 ]
 
 const menuOpen = ref(false)

@@ -12,7 +12,7 @@ import { typo } from '../typographie.js'
       <PageHeading
         kicker="Nos partenaires"
         title="Celles et ceux qui nous accompagnent"
-        lead="La Guilde ne joue pas seule : des lieux et des boutiques dijonnaises nous accueillent, nous équipent et font vivre le jeu avec nous."
+        lead="La Guilde ne joue pas seule : des lieux, des boutiques, un festival et des créateurs nous accueillent, nous équipent et font vivre le jeu avec nous."
       />
 
       <div class="partners">
@@ -28,7 +28,7 @@ import { typo } from '../typographie.js'
           <header class="partner__head">
             <span class="partner__icon"><IconGlyph :name="partner.icon" /></span>
             <h2 class="partner__name">{{ typo(partner.name) }}</h2>
-            <p class="partner__address">{{ typo(partner.address) }}</p>
+            <p v-if="partner.address" class="partner__address">{{ typo(partner.address) }}</p>
           </header>
 
           <div class="partner__body">
@@ -59,10 +59,10 @@ import { typo } from '../typographie.js'
   gap: 1.5rem;
 }
 
-/* Quatre partenaires : sur trois colonnes, le quatrième restait seul sur sa
-   ligne. Les tenir tous sur une seule ligne les rendrait à la fois plus
-   étroits et plus hauts (247 px de large pour 403 px de haut, mesuré) : on
-   passe donc en 2×2, vignettes larges et basses (518 × 303). */
+/* Deux par ligne : sur trois colonnes, le dernier partenaire restait souvent
+   seul sur sa ligne, et des vignettes plus étroites deviennent bien plus hautes
+   (247 px de large pour 403 px de haut, mesuré). Deux colonnes donnent des
+   vignettes larges et basses (518 px de large), quel que soit leur nombre. */
 @media (min-width: 900px) {
   .partners {
     grid-template-columns: repeat(2, 1fr);

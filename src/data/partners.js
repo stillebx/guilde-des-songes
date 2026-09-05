@@ -34,4 +34,18 @@ export const partners = [
     text: "La Clepsydre est un bar à jeux où la consommation permet de s'amuser dans un endroit cosy et convivial.",
     href: 'http://laclepsydre.fr/',
   },
+  {
+    icon: 'dice',
+    name: 'Ludimania',
+    address: 'Espace Tabourot des Accords, 21850 Saint-Apollinaire',
+    text: "Ludimania est le festival de jeu de Saint-Apollinaire, aux portes de Dijon.\nDeux jours gratuits chaque année, avec des éditeurs, des animations et une nocturne le samedi.",
+    href: 'https://ludimania.fr/',
+  },
+  {
+    // Ni boutique ni lieu : un duo d'auteurs, donc pas d'adresse à afficher.
+    icon: 'book',
+    name: 'Tales of C.',
+    text: "Tales of C. écrit des scénarios d'ambiance lovecraftienne ancrés dans l'Histoire, indépendants de tout système — dont Magnitogorsk, une enquête en URSS en 1932.\nLes PDF sont en accès libre et les livres imprimés à la demande, à prix coûtant.",
+    href: 'https://talesofc.fr/',
+  },
 ]

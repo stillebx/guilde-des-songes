@@ -4,6 +4,7 @@ import PartnersPage from './pages/PartnersPage.vue'
 import AgendaPage from './pages/AgendaPage.vue'
 import GazettePage from './pages/GazettePage.vue'
 import GazetteIssuePage from './pages/GazetteIssuePage.vue'
+import ResourcesPage from './pages/ResourcesPage.vue'
 
 // URL propres (/agenda) plutôt que /#/agenda. Le serveur doit renvoyer
 // index.html pour toute route inconnue : c'est le rôle de `public/.htaccess`
@@ -16,6 +17,7 @@ export const router = createRouter({
     { path: '/agenda', name: 'agenda', component: AgendaPage },
     { path: '/gazette', name: 'gazette', component: GazettePage },
     { path: '/gazette/:slug', name: 'gazette-issue', component: GazetteIssuePage },
+    { path: '/ressources', name: 'resources', component: ResourcesPage },
     // URL inconnue : retour à l'accueil plutôt qu'une page blanche.
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
